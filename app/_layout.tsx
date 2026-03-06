@@ -1,3 +1,4 @@
+import "./polyfills"
 import { Stack } from "expo-router";
 import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { ThemeProvider, DarkTheme, DefaultTheme } from "@react-navigation/native";

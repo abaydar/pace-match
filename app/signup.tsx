@@ -4,16 +4,19 @@ import { useTheme } from "./hooks/useTheme"
 import { Input } from "./components/Input"
 import { Button } from "./components/Button"
 import { OAuthButton } from "./components/OAuthButton"
-import { useSignUp } from "@clerk/clerk-expo"
+import { useSignUp, useOAuth } from "@clerk/clerk-expo"
 import { useRouter } from "expo-router"
 import * as Linking from "expo-linking"
+import * as WebBrowser from "expo-web-browser"
 
-type OAuthStrategy = "oauth_google" | "oauth_apple"
+WebBrowser.maybeCompleteAuthSession()
 
 export default function SignUpPage() {
   const theme = useTheme()
   const router = useRouter()
   const { signUp, setActive, isLoaded } = useSignUp()
+  const { startOAuthFlow: startGoogleFlow } = useOAuth({ strategy: "oauth_google" })
+  const { startOAuthFlow: startAppleFlow } = useOAuth({ strategy: "oauth_apple" })
 
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
@@ -44,13 +47,19 @@ export default function SignUpPage() {
     }
   }, [code, isLoaded, signUp, setActive, router])
 
-  const oAuthSignUp = (strategy: OAuthStrategy) => {
-    if (!isLoaded || !signUp) return
-    signUp.authenticateWithRedirect({
-      strategy,
-      redirectUrl: Linking.createURL("/"),
-      redirectUrlComplete: Linking.createURL("/"),
-    })
+  const onOAuthPress = async (provider: "google" | "apple") => {
+    try {
+      const startFlow = provider === "google" ? startGoogleFlow : startAppleFlow
+      const { createdSessionId, setActive: setOAuthActive } = await startFlow({
+        redirectUrl: Linking.createURL("/"),
+      })
+      if (createdSessionId && setOAuthActive) {
+        await setOAuthActive({ session: createdSessionId })
+        router.replace("/")
+      }
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   if (pendingVerification) {
@@ -111,8 +120,8 @@ export default function SignUpPage() {
       </Button>
 
       <View style={styles.oauthContainer}>
-        <OAuthButton provider="google" onPress={() => oAuthSignUp("oauth_google")} />
-        <OAuthButton provider="apple" onPress={() => oAuthSignUp("oauth_apple")} />
+        <OAuthButton provider="google" onPress={() => onOAuthPress("google")} />
+        <OAuthButton provider="apple" onPress={() => onOAuthPress("apple")} />
       </View>
 
       <View style={styles.footer}>
