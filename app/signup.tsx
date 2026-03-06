@@ -4,41 +4,37 @@ import { useTheme } from "./hooks/useTheme"
 import { Input } from "./components/Input"
 import { Button } from "./components/Button"
 import { OAuthButton } from "./components/OAuthButton"
-import { useSignIn } from "@clerk/clerk-expo"
+import { useSignUp } from "@clerk/clerk-expo"
 import { useRouter } from "expo-router"
 import * as Linking from "expo-linking"
 
 type OAuthStrategy = "oauth_google" | "oauth_apple"
 
-export default function LoginPage() {
+export default function SignUpPage() {
   const theme = useTheme()
   const router = useRouter()
-  const { signIn, setActive, isLoaded } = useSignIn()
+  const { signUp, setActive, isLoaded } = useSignUp()
 
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [code, setCode] = React.useState("")
-  const [showEmailCode, setShowEmailCode] = React.useState(false)
+  const [pendingVerification, setPendingVerification] = React.useState(false)
 
-  const onSignInPress = React.useCallback(async () => {
-    if (!isLoaded || !signIn) return
+  const onSignUpPress = React.useCallback(async () => {
+    if (!isLoaded || !signUp) return
     try {
-      const attempt = await signIn.create({ identifier: email, password })
-      if (attempt.status === "complete") {
-        await setActive({ session: attempt.createdSessionId })
-        router.replace("/")
-      } else if (attempt.status === "needs_second_factor") {
-        setShowEmailCode(true)
-      }
+      await signUp.create({ emailAddress: email, password })
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" })
+      setPendingVerification(true)
     } catch (err) {
       console.error(err)
     }
-  }, [email, password, isLoaded, signIn, setActive, router])
+  }, [email, password, isLoaded, signUp])
 
   const onVerifyPress = React.useCallback(async () => {
-    if (!isLoaded || !signIn) return
+    if (!isLoaded || !signUp) return
     try {
-      const attempt = await signIn.attemptSecondFactor({ strategy: "email_code", code })
+      const attempt = await signUp.attemptEmailAddressVerification({ code })
       if (attempt.status === "complete") {
         await setActive({ session: attempt.createdSessionId })
         router.replace("/")
@@ -46,28 +42,37 @@ export default function LoginPage() {
     } catch (err) {
       console.error(err)
     }
-  }, [code, isLoaded, signIn, setActive, router])
+  }, [code, isLoaded, signUp, setActive, router])
 
-  const oAuthSignIn = (strategy: OAuthStrategy) => {
-    if (!isLoaded || !signIn) return
-    signIn.authenticateWithRedirect({
+  const oAuthSignUp = (strategy: OAuthStrategy) => {
+    if (!isLoaded || !signUp) return
+    signUp.authenticateWithRedirect({
       strategy,
       redirectUrl: Linking.createURL("/"),
       redirectUrlComplete: Linking.createURL("/"),
     })
   }
 
-  if (showEmailCode) {
+  if (pendingVerification) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <Text style={[styles.title, { color: theme.text }]}>Verify your email</Text>
+        <Text style={[styles.subtitle, { color: theme.text }]}>
+          We sent a code to {email}
+        </Text>
         <Input
           value={code}
           onChangeText={setCode}
           placeholder="Enter verification code"
           placeholderTextColor={theme.placeholder}
+          keyboardType="numeric"
         />
-        <Button onPress={onVerifyPress} style={{ backgroundColor: theme.button }} textStyle={{ color: theme.buttonText }}>
+        <Button
+          onPress={onVerifyPress}
+          disabled={!code}
+          style={{ backgroundColor: theme.button }}
+          textStyle={{ color: theme.buttonText }}
+        >
           Verify
         </Button>
       </View>
@@ -76,7 +81,7 @@ export default function LoginPage() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={[styles.title, { color: theme.text }]}>Sign in</Text>
+      <Text style={[styles.title, { color: theme.text }]}>Create account</Text>
 
       <Text style={[styles.label, { color: theme.text }]}>Email address</Text>
       <Input
@@ -91,32 +96,32 @@ export default function LoginPage() {
       <Input
         value={password}
         onChangeText={setPassword}
-        placeholder="Enter password"
+        placeholder="Create password"
         placeholderTextColor={theme.placeholder}
         secureTextEntry
       />
 
       <Button
-        onPress={onSignInPress}
+        onPress={onSignUpPress}
         disabled={!email || !password}
         style={{ backgroundColor: theme.button }}
         textStyle={{ color: theme.buttonText }}
       >
-        Sign in
+        Sign up
       </Button>
 
       <View style={styles.oauthContainer}>
-        <OAuthButton provider="google" onPress={() => oAuthSignIn("oauth_google")} />
-        <OAuthButton provider="apple" onPress={() => oAuthSignIn("oauth_apple")} />
+        <OAuthButton provider="google" onPress={() => oAuthSignUp("oauth_google")} />
+        <OAuthButton provider="apple" onPress={() => oAuthSignUp("oauth_apple")} />
       </View>
 
       <View style={styles.footer}>
-        <Text style={{ color: theme.text }}>Don't have an account?</Text>
+        <Text style={{ color: theme.text }}>Already have an account?</Text>
         <Text
-          onPress={() => router.push("/signup")}
+          onPress={() => router.push("/login")}
           style={{ color: theme.button, fontWeight: "600" }}
         >
-          Sign up
+          Sign in
         </Text>
       </View>
     </View>
@@ -126,6 +131,7 @@ export default function LoginPage() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, gap: 12 },
   title: { fontSize: 24, fontWeight: "bold", marginBottom: 8 },
+  subtitle: { fontSize: 14, opacity: 0.7, marginBottom: 4 },
   label: { fontSize: 14, fontWeight: "600" },
   oauthContainer: { marginTop: 16, gap: 8 },
   footer: { flexDirection: "row", gap: 4, marginTop: 12, alignItems: "center" },
