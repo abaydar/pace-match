@@ -1,25 +1,10 @@
-import { useColorScheme } from "react-native"
+import { useColorScheme } from 'react-native'
+import { lightColors, darkColors, ColorTokens } from '../theme'
 
-export const colors = {
-  light: {
-    background: "#fff",
-    text: "#000",
-    inputBackground: "#f0f0f0",
-    placeholder: "#666",
-    button: "#0a7ea4",
-    buttonText: "#fff",
-  },
-  dark: {
-    background: "#000",
-    text: "#fff",
-    inputBackground: "#222",
-    placeholder: "#aaa",
-    button: "#0a7ea4",
-    buttonText: "#fff",
-  },
+export function useTheme(): ColorTokens {
+  const scheme = useColorScheme() ?? 'light'
+  return scheme === 'dark' ? darkColors : lightColors
 }
 
-export function useTheme() {
-  const scheme = useColorScheme() ?? "light"
-  return colors[scheme]
-}
+// Backward compat
+export const colors = { light: lightColors, dark: darkColors }
