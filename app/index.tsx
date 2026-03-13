@@ -1,130 +1,176 @@
-import * as React from "react"
-import { View, Text, FlatList, StyleSheet, Pressable } from "react-native"
-import { useTheme } from "./hooks/useTheme"
-import { Input } from "./components/Input"
+import React, { useEffect } from 'react'
+import { View, Text, StyleSheet, Pressable, Image } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { router } from 'expo-router'
+import { useAuth } from '@clerk/clerk-expo'
+import { Ionicons } from '@expo/vector-icons'
+import { useApp } from './context/AppContext'
+import { useTheme } from './hooks/useTheme'
+import { spacing, radius, fontSize, fontWeight } from './theme'
 
-const RUN_CLUBS = [
-  {
-    id: "1",
-    name: "Downtown Dashers",
-    location: "Central Park, New York",
-    distance: "0.3 mi away",
-    pace: "8:30 / mi",
-    members: 142,
-    days: "Mon, Wed, Sat",
-  },
-  {
-    id: "2",
-    name: "Sunset Striders",
-    location: "Riverside Park, New York",
-    distance: "0.8 mi away",
-    pace: "10:00 / mi",
-    members: 87,
-    days: "Tue, Thu, Sun",
-  },
-  {
-    id: "3",
-    name: "Brooklyn Bridge Runners",
-    location: "Brooklyn Bridge Park, New York",
-    distance: "1.2 mi away",
-    pace: "7:45 / mi",
-    members: 210,
-    days: "Mon, Fri, Sun",
-  },
-  {
-    id: "4",
-    name: "Early Bird Run Crew",
-    location: "Prospect Park, Brooklyn",
-    distance: "2.1 mi away",
-    pace: "9:15 / mi",
-    members: 63,
-    days: "Mon, Wed, Fri",
-  },
-  {
-    id: "5",
-    name: "Harlem Harriers",
-    location: "Marcus Garvey Park, New York",
-    distance: "2.5 mi away",
-    pace: "8:00 / mi",
-    members: 95,
-    days: "Tue, Sat",
-  },
-  {
-    id: "6",
-    name: "East River Run Club",
-    location: "East River Esplanade, New York",
-    distance: "3.0 mi away",
-    pace: "11:00 / mi",
-    members: 51,
-    days: "Wed, Sun",
-  },
+const FEATURES = [
+  { icon: 'search-outline' as const, text: 'Discover runners with your pace & goals' },
+  { icon: 'flash-outline' as const, text: 'Set "Ready to Run" status to meet up fast' },
+  { icon: 'people-outline' as const, text: 'Join run clubs and build your community' },
+  { icon: 'shield-checkmark-outline' as const, text: 'Club leaders manage schedules & safety' },
 ]
-
-type Club = typeof RUN_CLUBS[number]
-
-function ClubCard({ club, theme }: { club: Club; theme: ReturnType<typeof useTheme> }) {
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: theme.inputBackground, opacity: pressed ? 0.85 : 1 },
-      ]}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={[styles.clubName, { color: theme.text }]}>{club.name}</Text>
-        <Text style={[styles.distance, { color: theme.button }]}>{club.distance}</Text>
-      </View>
-      <Text style={[styles.location, { color: theme.placeholder }]}>{club.location}</Text>
-      <View style={styles.cardFooter}>
-        <Text style={[styles.tag, { color: theme.text }]}>Pace: {club.pace}</Text>
-        <Text style={[styles.tag, { color: theme.text }]}>{club.members} members</Text>
-        <Text style={[styles.tag, { color: theme.text }]}>{club.days}</Text>
-      </View>
-    </Pressable>
-  )
-}
 
 export default function Index() {
   const theme = useTheme()
-  const [query, setQuery] = React.useState("")
+  const { isSignedIn } = useAuth()
+  const { role } = useApp()
 
-  const filtered = RUN_CLUBS.filter(
-    (c) =>
-      c.name.toLowerCase().includes(query.toLowerCase()) ||
-      c.location.toLowerCase().includes(query.toLowerCase())
-  )
+  useEffect(() => {
+    if (isSignedIn) {
+      if (role === 'runner') {
+        router.replace('/(runner)/discover')
+      } else if (role === 'leader') {
+        router.replace('/(leader)/dashboard')
+      } else {
+        router.replace('/role-select')
+      }
+    }
+  }, [isSignedIn, role])
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Input
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Search run clubs near you..."
-        placeholderTextColor={theme.placeholder}
-        style={{ backgroundColor: theme.inputBackground, color: theme.text, marginBottom: 16 }}
-      />
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <ClubCard club={item} theme={theme} />}
-        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-        ListEmptyComponent={
-          <Text style={[styles.empty, { color: theme.placeholder }]}>No run clubs found.</Text>
-        }
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+      <View style={styles.container}>
+        {/* Logo / hero */}
+        <View style={styles.hero}>
+          <View style={[styles.logoMark, { backgroundColor: theme.brand }]}>
+            <Ionicons name="footsteps" size={40} color="#fff" />
+          </View>
+          <Text style={[styles.appName, { color: theme.text }]}>PaceMatch</Text>
+          <Text style={[styles.tagline, { color: theme.textSecondary }]}>
+            Find your running community
+          </Text>
+        </View>
+
+        {/* Features */}
+        <View style={styles.features}>
+          {FEATURES.map((f, i) => (
+            <View key={i} style={styles.featureRow}>
+              <View style={[styles.featureIcon, { backgroundColor: theme.brandLight }]}>
+                <Ionicons name={f.icon} size={18} color={theme.brand} />
+              </View>
+              <Text style={[styles.featureText, { color: theme.text }]}>{f.text}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Auth CTAs */}
+        <View style={styles.ctaGroup}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.primaryBtn,
+              { backgroundColor: theme.brand, opacity: pressed ? 0.85 : 1 },
+            ]}
+            onPress={() => router.push('/signup')}
+            accessibilityLabel="Get started"
+            accessibilityRole="button"
+          >
+            <Text style={styles.primaryBtnText}>Get Started</Text>
+            <Ionicons name="arrow-forward" size={18} color="#fff" />
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.secondaryBtn,
+              { borderColor: theme.border, opacity: pressed ? 0.7 : 1 },
+            ]}
+            onPress={() => router.push('/login')}
+            accessibilityLabel="Sign in"
+            accessibilityRole="button"
+          >
+            <Text style={[styles.secondaryBtnText, { color: theme.text }]}>I already have an account</Text>
+          </Pressable>
+        </View>
+
+        <Text style={[styles.footer, { color: theme.placeholder }]}>
+          Free to join · NYC & beyond
+        </Text>
+      </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  card: { borderRadius: 12, padding: 16, gap: 6 },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  clubName: { fontSize: 16, fontWeight: "700", flexShrink: 1 },
-  distance: { fontSize: 13, fontWeight: "600" },
-  location: { fontSize: 13 },
-  cardFooter: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
-  tag: { fontSize: 12, opacity: 0.8 },
-  empty: { textAlign: "center", marginTop: 40, fontSize: 15 },
+  safe: { flex: 1 },
+  container: {
+    flex: 1,
+    padding: spacing.xl,
+    justifyContent: 'center',
+    gap: spacing.xxl,
+  },
+  hero: {
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  logoMark: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  appName: {
+    fontSize: fontSize.xxxl,
+    fontWeight: fontWeight.bold,
+    letterSpacing: -0.5,
+  },
+  tagline: {
+    fontSize: fontSize.lg,
+    textAlign: 'center',
+  },
+  features: {
+    gap: spacing.md,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  featureIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureText: {
+    fontSize: fontSize.md,
+    flex: 1,
+    lineHeight: 22,
+  },
+  ctaGroup: {
+    gap: spacing.md,
+  },
+  primaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+  },
+  primaryBtnText: {
+    color: '#fff',
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+  },
+  secondaryBtn: {
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  secondaryBtnText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+  },
+  footer: {
+    textAlign: 'center',
+    fontSize: fontSize.sm,
+  },
 })

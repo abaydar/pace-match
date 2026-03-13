@@ -40,7 +40,7 @@ export default function SignUpPage() {
       const attempt = await signUp.attemptEmailAddressVerification({ code })
       if (attempt.status === "complete") {
         await setActive({ session: attempt.createdSessionId })
-        router.replace("/")
+        router.replace("/role-select")
       }
     } catch (err) {
       console.error(err)
@@ -55,7 +55,7 @@ export default function SignUpPage() {
       })
       if (createdSessionId && setOAuthActive) {
         await setOAuthActive({ session: createdSessionId })
-        router.replace("/")
+        router.replace("/role-select")
       }
     } catch (err) {
       console.error(err)
