@@ -1,23 +1,29 @@
 import React from 'react'
 import { View, Text, StyleSheet, Pressable } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { RunEvent, formatDateTime } from '../data/mockData'
 import { useTheme } from '../hooks/useTheme'
 import { spacing, radius, fontSize, fontWeight } from '../theme'
+import type { EventRow } from '../../lib/database.types'
 
-type Props = {
-  event: RunEvent
-  onRSVP?: (status: 'going' | 'maybe') => void
-  currentUserId?: string
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  })
 }
 
-export function RunEventCard({ event, onRSVP, currentUserId }: Props) {
+type Props = {
+  event: EventRow
+  onRSVP?: (status: 'going' | 'maybe') => void
+  currentUserId?: string
+  myRsvpStatus?: 'going' | 'maybe' | 'not_going'
+}
+
+export function RunEventCard({ event, onRSVP, myRsvpStatus }: Props) {
   const theme = useTheme()
-  const goingCount = event.rsvpList.filter((r) => r.status === 'going').length
-  const maybeCount = event.rsvpList.filter((r) => r.status === 'maybe').length
-  const myRSVP = currentUserId
-    ? event.rsvpList.find((r) => r.userId === currentUserId)?.status
-    : undefined
+  const paceGroups: { label: string; pace: string }[] = Array.isArray(event.pace_groups)
+    ? (event.pace_groups as { label: string; pace: string }[])
+    : []
 
   return (
     <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -35,52 +41,51 @@ export function RunEventCard({ event, onRSVP, currentUserId }: Props) {
       </View>
 
       {/* Location */}
-      <View style={styles.row}>
-        <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
-        <Text style={[styles.meta, { color: theme.textSecondary }]}>{event.location}</Text>
-      </View>
+      {event.location && (
+        <View style={styles.row}>
+          <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
+          <Text style={[styles.meta, { color: theme.textSecondary }]}>{event.location}</Text>
+        </View>
+      )}
 
       {/* Distance options */}
-      <View style={styles.tagsRow}>
-        {event.distanceOptions.map((d) => (
-          <View key={d} style={[styles.tag, { backgroundColor: theme.inputBackground }]}>
-            <Text style={[styles.tagText, { color: theme.textSecondary }]}>{d}</Text>
-          </View>
-        ))}
-      </View>
+      {event.distance_options.length > 0 && (
+        <View style={styles.tagsRow}>
+          {event.distance_options.map((d) => (
+            <View key={d} style={[styles.tag, { backgroundColor: theme.inputBackground }]}>
+              <Text style={[styles.tagText, { color: theme.textSecondary }]}>{d} mi</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* Pace groups */}
-      <View style={styles.row}>
-        <Ionicons name="speedometer-outline" size={14} color={theme.textSecondary} />
-        <Text style={[styles.meta, { color: theme.textSecondary }]}>
-          {event.paceGroups.join('  ·  ')}
-        </Text>
-      </View>
+      {paceGroups.length > 0 && (
+        <View style={styles.row}>
+          <Ionicons name="speedometer-outline" size={14} color={theme.textSecondary} />
+          <Text style={[styles.meta, { color: theme.textSecondary }]}>
+            {paceGroups.map((g) => g.label).join('  ·  ')}
+          </Text>
+        </View>
+      )}
 
       {/* Route notes */}
-      {event.routeNotes ? (
+      {event.route_notes ? (
         <Text style={[styles.notes, { color: theme.textSecondary }]} numberOfLines={2}>
-          {event.routeNotes}
+          {event.route_notes}
         </Text>
       ) : null}
 
       {/* RSVP footer */}
-      <View style={styles.footer}>
-        <View style={styles.rsvpCount}>
-          <Text style={[styles.rsvpText, { color: theme.text }]}>
-            <Text style={{ color: theme.success, fontWeight: fontWeight.bold }}>{goingCount} going</Text>
-            {'  '}
-            <Text style={{ color: theme.warning }}>{maybeCount} maybe</Text>
-          </Text>
-        </View>
-        {onRSVP && (
+      {onRSVP && (
+        <View style={styles.footer}>
           <View style={styles.rsvpActions}>
             <Pressable
               style={({ pressed }) => [
                 styles.rsvpBtn,
                 {
                   backgroundColor:
-                    myRSVP === 'going' ? theme.success : theme.inputBackground,
+                    myRsvpStatus === 'going' ? theme.success : theme.inputBackground,
                   opacity: pressed ? 0.8 : 1,
                 },
               ]}
@@ -88,7 +93,7 @@ export function RunEventCard({ event, onRSVP, currentUserId }: Props) {
               accessibilityLabel="RSVP Going"
               accessibilityRole="button"
             >
-              <Text style={[styles.rsvpBtnText, { color: myRSVP === 'going' ? '#fff' : theme.textSecondary }]}>
+              <Text style={[styles.rsvpBtnText, { color: myRsvpStatus === 'going' ? '#fff' : theme.textSecondary }]}>
                 Going
               </Text>
             </Pressable>
@@ -97,7 +102,7 @@ export function RunEventCard({ event, onRSVP, currentUserId }: Props) {
                 styles.rsvpBtn,
                 {
                   backgroundColor:
-                    myRSVP === 'maybe' ? theme.warning : theme.inputBackground,
+                    myRsvpStatus === 'maybe' ? theme.warning : theme.inputBackground,
                   opacity: pressed ? 0.8 : 1,
                 },
               ]}
@@ -105,13 +110,13 @@ export function RunEventCard({ event, onRSVP, currentUserId }: Props) {
               accessibilityLabel="RSVP Maybe"
               accessibilityRole="button"
             >
-              <Text style={[styles.rsvpBtnText, { color: myRSVP === 'maybe' ? '#fff' : theme.textSecondary }]}>
+              <Text style={[styles.rsvpBtnText, { color: myRsvpStatus === 'maybe' ? '#fff' : theme.textSecondary }]}>
                 Maybe
               </Text>
             </Pressable>
           </View>
-        )}
-      </View>
+        </View>
+      )}
     </View>
   )
 }

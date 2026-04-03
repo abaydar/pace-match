@@ -3,28 +3,28 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
-import {
-  MOCK_CLUBS,
-  MOCK_EVENTS,
-  MOCK_ANNOUNCEMENTS,
-  formatDateTime,
-} from '../data/mockData'
 import { useApp } from '../context/AppContext'
+import { useLeaderClub } from '../../lib/hooks/useClub'
 import { useTheme } from '../hooks/useTheme'
 import { spacing, radius, fontSize, fontWeight } from '../theme'
 
-const MY_CLUB = MOCK_CLUBS[1] // Brooklyn Bridge Runners
-const NEXT_EVENT = MOCK_EVENTS[0]
-const RECENT_ANNOUNCEMENT = MOCK_ANNOUNCEMENTS[0]
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  })
+}
 
 export default function Dashboard() {
   const theme = useTheme()
-  const { currentUser } = useApp()
+  const { dbUser } = useApp()
+  const { club, events, announcements, memberCount, sendEmergencyAlert } = useLeaderClub(dbUser?.id)
 
-  const goingCount = NEXT_EVENT.rsvpList.filter((r) => r.status === 'going').length
-  const maybeCount = NEXT_EVENT.rsvpList.filter((r) => r.status === 'maybe').length
+  const nextEvent = events[0] ?? null
+  const recentAnnouncement = announcements[0] ?? null
 
   function handleWeatherAlert() {
+    if (!club) return
     Alert.alert(
       'Weather Alert',
       'Send a weather update to all club members?',
@@ -33,7 +33,10 @@ export default function Dashboard() {
         {
           text: 'Send Alert',
           style: 'destructive',
-          onPress: () => Alert.alert('Alert Sent', 'Weather alert sent to 210 members.'),
+          onPress: async () => {
+            await sendEmergencyAlert(club.id, 'Weather Alert', 'Please check conditions before heading out.')
+            Alert.alert('Alert Sent', `Weather alert sent to ${memberCount} members.`)
+          },
         },
       ]
     )
@@ -46,46 +49,39 @@ export default function Dashboard() {
         <View style={styles.welcomeRow}>
           <View>
             <Text style={[styles.welcomeLabel, { color: theme.textSecondary }]}>Welcome back,</Text>
-            <Text style={[styles.welcomeName, { color: theme.text }]}>{currentUser?.name}</Text>
+            <Text style={[styles.welcomeName, { color: theme.text }]}>{dbUser?.name}</Text>
           </View>
           <View style={[styles.clubBadge, { backgroundColor: theme.brandLight }]}>
             <Ionicons name="people" size={14} color={theme.brand} />
             <Text style={[styles.clubBadgeText, { color: theme.brand }]}>
-              {MY_CLUB.memberCount} members
+              {memberCount} members
             </Text>
           </View>
         </View>
 
         {/* Next run card */}
-        <View style={[styles.nextRunCard, { backgroundColor: theme.brand }]}>
-          <Text style={styles.nextRunLabel}>Next Scheduled Run</Text>
-          <Text style={styles.nextRunTitle}>{NEXT_EVENT.title}</Text>
-          <View style={styles.nextRunMeta}>
-            <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.8)" />
-            <Text style={styles.nextRunMetaText}>{formatDateTime(NEXT_EVENT.datetime)}</Text>
-          </View>
-          <View style={styles.nextRunMeta}>
-            <Ionicons name="location-outline" size={14} color="rgba(255,255,255,0.8)" />
-            <Text style={styles.nextRunMetaText}>{NEXT_EVENT.location}</Text>
-          </View>
-          {/* RSVP summary */}
-          <View style={styles.rsvpSummary}>
-            <View style={styles.rsvpItem}>
-              <Text style={styles.rsvpCount}>{goingCount}</Text>
-              <Text style={styles.rsvpLabel}>Going</Text>
+        {nextEvent ? (
+          <View style={[styles.nextRunCard, { backgroundColor: theme.brand }]}>
+            <Text style={styles.nextRunLabel}>Next Scheduled Run</Text>
+            <Text style={styles.nextRunTitle}>{nextEvent.title}</Text>
+            <View style={styles.nextRunMeta}>
+              <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.8)" />
+              <Text style={styles.nextRunMetaText}>{formatDateTime(nextEvent.datetime)}</Text>
             </View>
-            <View style={styles.rsvpDivider} />
-            <View style={styles.rsvpItem}>
-              <Text style={styles.rsvpCount}>{maybeCount}</Text>
-              <Text style={styles.rsvpLabel}>Maybe</Text>
-            </View>
-            <View style={styles.rsvpDivider} />
-            <View style={styles.rsvpItem}>
-              <Text style={styles.rsvpCount}>{MY_CLUB.memberCount - goingCount - maybeCount}</Text>
-              <Text style={styles.rsvpLabel}>No reply</Text>
-            </View>
+            {nextEvent.location && (
+              <View style={styles.nextRunMeta}>
+                <Ionicons name="location-outline" size={14} color="rgba(255,255,255,0.8)" />
+                <Text style={styles.nextRunMetaText}>{nextEvent.location}</Text>
+              </View>
+            )}
           </View>
-        </View>
+        ) : (
+          <View style={[styles.nextRunCard, { backgroundColor: theme.brand }]}>
+            <Text style={styles.nextRunLabel}>Next Scheduled Run</Text>
+            <Text style={styles.nextRunTitle}>No upcoming runs</Text>
+            <Text style={styles.nextRunMetaText}>Create your first run event below</Text>
+          </View>
+        )}
 
         {/* Quick actions */}
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Actions</Text>
@@ -137,21 +133,21 @@ export default function Dashboard() {
         </View>
 
         {/* Recent announcement */}
-        {RECENT_ANNOUNCEMENT && (
+        {recentAnnouncement && (
           <>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Latest Announcement</Text>
             <View style={[styles.announcementCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              {RECENT_ANNOUNCEMENT.pinned && (
+              {recentAnnouncement.pinned && (
                 <View style={styles.pinnedRow}>
                   <Ionicons name="pin" size={13} color={theme.brand} />
                   <Text style={[styles.pinnedText, { color: theme.brand }]}>Pinned</Text>
                 </View>
               )}
               <Text style={[styles.announcementTitle, { color: theme.text }]}>
-                {RECENT_ANNOUNCEMENT.title}
+                {recentAnnouncement.title}
               </Text>
               <Text style={[styles.announcementBody, { color: theme.textSecondary }]} numberOfLines={3}>
-                {RECENT_ANNOUNCEMENT.body}
+                {recentAnnouncement.body}
               </Text>
               <Pressable
                 onPress={() => router.push('/(leader)/announcements')}
@@ -163,23 +159,6 @@ export default function Dashboard() {
             </View>
           </>
         )}
-
-        {/* Club schedule snapshot */}
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Regular Schedule</Text>
-        <View style={[styles.scheduleCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          {MY_CLUB.schedule.map((s, i) => (
-            <View
-              key={i}
-              style={[
-                styles.scheduleRow,
-                i < MY_CLUB.schedule.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.border },
-              ]}
-            >
-              <Ionicons name="time-outline" size={15} color={theme.brand} />
-              <Text style={[styles.scheduleText, { color: theme.text }]}>{s}</Text>
-            </View>
-          ))}
-        </View>
       </ScrollView>
     </SafeAreaView>
   )

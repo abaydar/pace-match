@@ -11,16 +11,23 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { MOCK_EVENTS, RunEvent, formatDateTime } from '../data/mockData'
 import { RunEventCard } from '../components/RunEventCard'
 import { useApp } from '../context/AppContext'
+import { useLeaderClub } from '../../lib/hooks/useClub'
 import { useTheme } from '../hooks/useTheme'
 import { spacing, radius, fontSize, fontWeight } from '../theme'
 
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  })
+}
+
 export default function Events() {
   const theme = useTheme()
-  const { currentUser } = useApp()
-  const [events, setEvents] = useState<RunEvent[]>(MOCK_EVENTS)
+  const { dbUser } = useApp()
+  const { club, events, createEvent, rsvp } = useLeaderClub(dbUser?.id)
   const [showCreate, setShowCreate] = useState(false)
 
   // Form state
@@ -31,40 +38,36 @@ export default function Events() {
   const [paceGroupsText, setPaceGroupsText] = useState('')
   const [distancesText, setDistancesText] = useState('')
 
-  function handleCreate() {
-    if (!title || !location) {
+  async function handleCreate() {
+    if (!title || !location || !club) {
       Alert.alert('Missing fields', 'Please fill in the title and location.')
       return
     }
-    const newEvent: RunEvent = {
-      id: `e${Date.now()}`,
-      clubId: 'c2',
+    await createEvent({
+      club_id: club.id,
       title,
       datetime: new Date().toISOString(),
       location,
-      routeNotes,
-      paceGroups: paceGroupsText ? paceGroupsText.split(',').map((s) => s.trim()) : [],
-      distanceOptions: distancesText ? distancesText.split(',').map((s) => s.trim()) : [],
-      rsvpList: [],
-    }
-    setEvents((prev) => [newEvent, ...prev])
+      route_notes: routeNotes || null,
+      pace_groups: paceGroupsText
+        ? paceGroupsText.split(',').map((s) => ({ label: s.trim(), pace: s.trim() }))
+        : [],
+      distance_options: distancesText
+        ? distancesText.split(',').map((s) => parseFloat(s.trim())).filter(Boolean)
+        : [],
+    })
     setShowCreate(false)
     setTitle('')
     setLocation('')
     setRouteNotes('')
     setPaceGroupsText('')
     setDistancesText('')
-    Alert.alert('Run Created!', `"${newEvent.title}" has been added to the schedule.`)
+    Alert.alert('Run Created!', `"${title}" has been added to the schedule.`)
   }
 
-  function handleRSVP(eventId: string, status: 'going' | 'maybe') {
-    setEvents((prev) =>
-      prev.map((e) => {
-        if (e.id !== eventId) return e
-        const filtered = e.rsvpList.filter((r) => r.userId !== (currentUser?.id ?? 'me'))
-        return { ...e, rsvpList: [...filtered, { userId: currentUser?.id ?? 'me', status }] }
-      })
-    )
+  async function handleRSVP(eventId: string, status: 'going' | 'maybe') {
+    if (!dbUser) return
+    await rsvp(eventId, dbUser.id, status)
   }
 
   return (
@@ -91,7 +94,7 @@ export default function Events() {
           <RunEventCard
             key={event.id}
             event={event}
-            currentUserId={currentUser?.id}
+            currentUserId={dbUser?.id}
             onRSVP={(status) => handleRSVP(event.id, status)}
           />
         ))}

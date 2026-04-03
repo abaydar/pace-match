@@ -5,18 +5,19 @@ import {
   StyleSheet,
   Pressable,
   Switch,
-  FlatList,
   ScrollView,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { MOCK_USERS, ReadyStatus, readyStatusLabel } from '../data/mockData'
-import { StatusBadge } from '../components/StatusBadge'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../hooks/useTheme'
 import { spacing, radius, fontSize, fontWeight } from '../theme'
+import { useRunners } from '../../lib/hooks/useRunners'
+import type { ReadyStatusVisibility } from '../../lib/database.types'
 
-const TIME_OPTIONS: { label: string; value: ReadyStatus['timeWindow'] }[] = [
+type TimeOption = 'now' | 'today-morning' | 'today-afternoon' | 'today-evening' | 'tomorrow-morning' | 'tomorrow-evening'
+
+const TIME_OPTIONS: { label: string; value: TimeOption }[] = [
   { label: 'Right now', value: 'now' },
   { label: 'This morning', value: 'today-morning' },
   { label: 'This afternoon', value: 'today-afternoon' },
@@ -25,41 +26,97 @@ const TIME_OPTIONS: { label: string; value: ReadyStatus['timeWindow'] }[] = [
   { label: 'Tomorrow evening', value: 'tomorrow-evening' },
 ]
 
-const VISIBILITY_OPTIONS: { label: string; value: ReadyStatus['visibility']; icon: keyof typeof Ionicons.glyphMap }[] = [
+const VISIBILITY_OPTIONS: { label: string; value: ReadyStatusVisibility; icon: keyof typeof Ionicons.glyphMap }[] = [
   { label: 'Everyone', value: 'everyone', icon: 'globe-outline' },
-  { label: 'Club members only', value: 'club-only', icon: 'shield-outline' },
+  { label: 'Club members only', value: 'club_members', icon: 'shield-outline' },
 ]
+
+function timeOptionToWindow(value: TimeOption): { start: Date; end: Date } | null {
+  const now = new Date()
+  const today = new Date(now)
+  const tomorrow = new Date(now)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  switch (value) {
+    case 'now': return null
+    case 'today-morning':
+      today.setHours(6, 0, 0, 0)
+      const mEnd = new Date(today); mEnd.setHours(12, 0, 0, 0)
+      return { start: today, end: mEnd }
+    case 'today-afternoon':
+      today.setHours(12, 0, 0, 0)
+      const aEnd = new Date(today); aEnd.setHours(17, 0, 0, 0)
+      return { start: today, end: aEnd }
+    case 'today-evening':
+      today.setHours(17, 0, 0, 0)
+      const eEnd = new Date(today); eEnd.setHours(21, 0, 0, 0)
+      return { start: today, end: eEnd }
+    case 'tomorrow-morning':
+      tomorrow.setHours(6, 0, 0, 0)
+      const tmEnd = new Date(tomorrow); tmEnd.setHours(12, 0, 0, 0)
+      return { start: tomorrow, end: tmEnd }
+    case 'tomorrow-evening':
+      tomorrow.setHours(17, 0, 0, 0)
+      const teEnd = new Date(tomorrow); teEnd.setHours(21, 0, 0, 0)
+      return { start: tomorrow, end: teEnd }
+  }
+}
 
 export default function ReadyToRun() {
   const theme = useTheme()
-  const { readyStatus, setReadyStatus, currentUser } = useApp()
+  const { readyStatus, setReadyNow, setTimeWindow, clearReadyStatus, dbUser } = useApp()
+  const { runners, fetchMatches } = useRunners()
   const [isReady, setIsReady] = useState(readyStatus !== null)
-  const [timeWindow, setTimeWindow] = useState<ReadyStatus['timeWindow']>('now')
-  const [visibility, setVisibility] = useState<ReadyStatus['visibility']>('club-only')
+  const [timeOption, setTimeOption] = useState<TimeOption>('now')
+  const [visibility, setVisibility] = useState<ReadyStatusVisibility>('club_members')
 
-  const availableRunners = MOCK_USERS.filter((u) => u.readyStatus !== null)
+  // Runners with active ready status from matched results
+  const availableRunners = runners.filter((r) => r.ready_status !== null)
 
-  function handleToggle(value: boolean) {
+  async function handleToggle(value: boolean) {
     setIsReady(value)
     if (value) {
-      setReadyStatus({ timeWindow, visibility })
+      if (timeOption === 'now') {
+        await setReadyNow(visibility)
+      } else {
+        const window = timeOptionToWindow(timeOption)
+        if (window) await setTimeWindow(window.start, window.end, visibility)
+      }
+      fetchMatches()
     } else {
-      setReadyStatus(null)
+      await clearReadyStatus()
     }
   }
 
-  function handleTimeChange(value: ReadyStatus['timeWindow']) {
-    setTimeWindow(value)
+  async function handleTimeChange(value: TimeOption) {
+    setTimeOption(value)
     if (isReady) {
-      setReadyStatus({ timeWindow: value, visibility })
+      if (value === 'now') {
+        await setReadyNow(visibility)
+      } else {
+        const window = timeOptionToWindow(value)
+        if (window) await setTimeWindow(window.start, window.end, visibility)
+      }
     }
   }
 
-  function handleVisibilityChange(value: ReadyStatus['visibility']) {
+  async function handleVisibilityChange(value: ReadyStatusVisibility) {
     setVisibility(value)
     if (isReady) {
-      setReadyStatus({ timeWindow, visibility: value })
+      if (timeOption === 'now') {
+        await setReadyNow(value)
+      } else {
+        const window = timeOptionToWindow(timeOption)
+        if (window) await setTimeWindow(window.start, window.end, value)
+      }
     }
+  }
+
+  function readyStatusLabel(): string {
+    if (!isReady) return "Let others know you're available"
+    const opt = TIME_OPTIONS.find((o) => o.value === timeOption)
+    const vis = visibility === 'everyone' ? 'everyone' : 'club members only'
+    return `${opt?.label ?? 'Ready'} · visible to ${vis}`
   }
 
   return (
@@ -79,9 +136,7 @@ export default function ReadyToRun() {
               <View>
                 <Text style={[styles.statusLabel, { color: theme.text }]}>Ready to Run</Text>
                 <Text style={[styles.statusSub, { color: theme.textSecondary }]}>
-                  {isReady
-                    ? readyStatusLabel({ timeWindow, visibility })
-                    : "Let others know you're available"}
+                  {readyStatusLabel()}
                 </Text>
               </View>
             </View>
@@ -105,19 +160,19 @@ export default function ReadyToRun() {
                 styles.timeOption,
                 {
                   backgroundColor:
-                    timeWindow === opt.value ? theme.brand : theme.surface,
-                  borderColor: timeWindow === opt.value ? theme.brand : theme.border,
+                    timeOption === opt.value ? theme.brand : theme.surface,
+                  borderColor: timeOption === opt.value ? theme.brand : theme.border,
                 },
               ]}
               onPress={() => handleTimeChange(opt.value)}
               accessibilityLabel={opt.label}
               accessibilityRole="radio"
-              accessibilityState={{ selected: timeWindow === opt.value }}
+              accessibilityState={{ selected: timeOption === opt.value }}
             >
               <Text
                 style={[
                   styles.timeOptionText,
-                  { color: timeWindow === opt.value ? '#fff' : theme.text },
+                  { color: timeOption === opt.value ? '#fff' : theme.text },
                 ]}
               >
                 {opt.label}
@@ -190,16 +245,18 @@ export default function ReadyToRun() {
               >
                 <View style={[styles.miniAvatar, { backgroundColor: theme.brandLight }]}>
                   <Text style={[styles.miniAvatarText, { color: theme.brand }]}>
-                    {runner.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                    {runner.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                   </Text>
                 </View>
                 <View style={styles.runnerInfo}>
                   <Text style={[styles.runnerName, { color: theme.text }]}>{runner.name}</Text>
                   <Text style={[styles.runnerMeta, { color: theme.textSecondary }]}>
-                    {runner.paceRange} · {runner.location}
+                    {runner.location ?? 'Unknown location'}
                   </Text>
                 </View>
-                {runner.readyStatus && <StatusBadge status={runner.readyStatus} small />}
+                <View style={[styles.readyBadge, { backgroundColor: '#D1FAE5' }]}>
+                  <Text style={styles.readyBadgeText}>Ready</Text>
+                </View>
               </View>
             ))}
           </View>
@@ -344,5 +401,15 @@ const styles = StyleSheet.create({
   runnerMeta: {
     fontSize: fontSize.xs,
     marginTop: 2,
+  },
+  readyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+  },
+  readyBadgeText: {
+    fontSize: 11,
+    fontWeight: fontWeight.semibold,
+    color: '#059669',
   },
 })

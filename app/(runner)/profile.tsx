@@ -13,16 +13,25 @@ const TRAINING_OPTIONS = ['5K', '10K', 'Half Marathon', 'Marathon', 'None']
 
 export default function Profile() {
   const theme = useTheme()
-  const { currentUser, setRole } = useApp()
+  const { dbUser, updateUser } = useApp()
 
   const [editing, setEditing] = useState(false)
-  const [name, setName] = useState(currentUser?.name ?? '')
-  const [location, setLocation] = useState(currentUser?.location ?? '')
-  const [paceRange, setPaceRange] = useState(currentUser?.paceRange ?? '')
-  const [bio, setBio] = useState(currentUser?.bio ?? '')
+  const [name, setName] = useState(dbUser?.name ?? '')
+  const [location, setLocation] = useState(dbUser?.location ?? '')
+  const [saving, setSaving] = useState(false)
 
-  const user = currentUser
+  const user = dbUser
   if (!user) return null
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await updateUser({ name, location })
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['bottom']}>
@@ -38,18 +47,18 @@ export default function Profile() {
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
             <Text style={[styles.locationText, { color: theme.textSecondary }]}>
-              {editing ? location : user.location}
+              {editing ? location : (user.location ?? 'No location set')}
             </Text>
           </View>
           <Pressable
             style={[styles.editBtn, { borderColor: theme.brand }]}
-            onPress={() => setEditing((v) => !v)}
+            onPress={editing ? handleSave : () => setEditing(true)}
             accessibilityLabel={editing ? 'Save profile' : 'Edit profile'}
             accessibilityRole="button"
           >
             <Ionicons name={editing ? 'checkmark-outline' : 'create-outline'} size={16} color={theme.brand} />
             <Text style={[styles.editBtnText, { color: theme.brand }]}>
-              {editing ? 'Save' : 'Edit Profile'}
+              {saving ? 'Saving…' : editing ? 'Save' : 'Edit Profile'}
             </Text>
           </Pressable>
         </View>
@@ -71,32 +80,6 @@ export default function Profile() {
               onChangeText={setLocation}
               accessibilityLabel="Location"
             />
-            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Pace Range</Text>
-            <TextInput
-              style={[styles.input, { color: theme.text, backgroundColor: theme.inputBackground }]}
-              value={paceRange}
-              onChangeText={setPaceRange}
-              placeholder="e.g. 8:30–9:00 /mi"
-              placeholderTextColor={theme.placeholder}
-              accessibilityLabel="Pace range"
-            />
-            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Bio</Text>
-            <TextInput
-              style={[styles.input, styles.bioInput, { color: theme.text, backgroundColor: theme.inputBackground }]}
-              value={bio}
-              onChangeText={setBio}
-              multiline
-              numberOfLines={3}
-              accessibilityLabel="Bio"
-            />
-          </View>
-        )}
-
-        {/* Bio */}
-        {!editing && user.bio && (
-          <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.cardTitle, { color: theme.text }]}>About</Text>
-            <Text style={[styles.bioText, { color: theme.textSecondary }]}>{user.bio}</Text>
           </View>
         )}
 
@@ -107,40 +90,50 @@ export default function Profile() {
           <View style={styles.statRow}>
             <Ionicons name="timer-outline" size={16} color={theme.brand} />
             <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Pace</Text>
-            <Text style={[styles.statValue, { color: theme.text }]}>{user.paceRange}</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>
+              {user.pace_min && user.pace_max
+                ? `${Math.floor(user.pace_min / 60)}:${String(user.pace_min % 60).padStart(2, '0')}–${Math.floor(user.pace_max / 60)}:${String(user.pace_max % 60).padStart(2, '0')} /mi`
+                : 'Not set'}
+            </Text>
           </View>
 
           <View style={styles.statRow}>
             <Ionicons name="flag-outline" size={16} color={theme.brand} />
             <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Training</Text>
-            <Text style={[styles.statValue, { color: theme.text }]}>{user.training ?? 'None'}</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>{user.training_type ?? 'None'}</Text>
           </View>
 
           <View style={styles.statRow}>
             <Ionicons name="map-outline" size={16} color={theme.brand} />
             <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Distances</Text>
-            <Text style={[styles.statValue, { color: theme.text }]}>{user.distances.join(', ')}</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>
+              {user.distance_min && user.distance_max
+                ? `${user.distance_min}–${user.distance_max} mi`
+                : 'Not set'}
+            </Text>
           </View>
         </View>
 
         {/* Goals */}
-        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Text style={[styles.cardTitle, { color: theme.text }]}>Goals</Text>
-          <View style={styles.tagsRow}>
-            {user.goals.map((g) => (
-              <View key={g} style={[styles.tag, { backgroundColor: theme.brandLight }]}>
-                <Text style={[styles.tagText, { color: theme.brand }]}>{g}</Text>
-              </View>
-            ))}
+        {user.goals.length > 0 && (
+          <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>Goals</Text>
+            <View style={styles.tagsRow}>
+              {user.goals.map((g: string) => (
+                <View key={g} style={[styles.tag, { backgroundColor: theme.brandLight }]}>
+                  <Text style={[styles.tagText, { color: theme.brand }]}>{g}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Destination runs */}
-        {user.destinationRuns.length > 0 && (
+        {user.destination_runs.length > 0 && (
           <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Text style={[styles.cardTitle, { color: theme.text }]}>Favorite Routes</Text>
             <View style={styles.tagsRow}>
-              {user.destinationRuns.map((d) => (
+              {user.destination_runs.map((d: string) => (
                 <View key={d} style={[styles.tag, { backgroundColor: theme.inputBackground }]}>
                   <Ionicons name="navigate-outline" size={12} color={theme.textSecondary} />
                   <Text style={[styles.tagText, { color: theme.textSecondary }]}>{d}</Text>
@@ -149,23 +142,6 @@ export default function Profile() {
             </View>
           </View>
         )}
-
-        {/* Switch role */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.switchRoleBtn,
-            { borderColor: theme.danger, opacity: pressed ? 0.8 : 1 },
-          ]}
-          onPress={() => {
-            setRole('leader')
-            router.replace('/(leader)/dashboard')
-          }}
-          accessibilityLabel="Switch to Club Leader view"
-          accessibilityRole="button"
-        >
-          <Ionicons name="swap-horizontal-outline" size={18} color={theme.danger} />
-          <Text style={[styles.switchRoleText, { color: theme.danger }]}>Switch to Club Leader View</Text>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   )

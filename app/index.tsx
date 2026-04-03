@@ -18,19 +18,19 @@ const FEATURES = [
 export default function Index() {
   const theme = useTheme()
   const { isSignedIn } = useAuth()
-  const { role } = useApp()
+  const { dbUser, userLoading } = useApp()
 
   useEffect(() => {
-    if (isSignedIn) {
-      if (role === 'runner') {
-        router.replace('/(runner)/discover')
-      } else if (role === 'leader') {
-        router.replace('/(leader)/dashboard')
-      } else {
-        router.replace('/role-select')
-      }
+    if (!isSignedIn || userLoading) return
+    if (dbUser?.role === 'runner') {
+      router.replace('/(runner)/discover')
+    } else if (dbUser?.role === 'leader') {
+      router.replace('/(leader)/dashboard')
+    } else if (isSignedIn) {
+      // Signed in but no DB user yet — send to role select
+      router.replace('/role-select')
     }
-  }, [isSignedIn, role])
+  }, [isSignedIn, userLoading, dbUser?.role])
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
