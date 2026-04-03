@@ -4,9 +4,10 @@ import type { ClubRow } from "../database.types";
 
 export type ClubWithCount = ClubRow & { member_count: number };
 
-export function useClubs() {
+export function useClubs(userId?: string) {
   const getSupabase = useGetSupabase();
   const [clubs, setClubs] = useState<ClubWithCount[]>([]);
+  const [joinedClubIds, setJoinedClubIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,16 +17,20 @@ export function useClubs() {
       setError(null);
       const sb = await getSupabase();
 
-      const { data: clubRows, error: err } = await sb
-        .from("run_clubs")
-        .select("*")
-        .order("name");
+      const [clubsRes, membershipsRes] = await Promise.all([
+        sb.from("run_clubs").select("*").order("name"),
+        userId
+          ? sb.from("club_members").select("club_id").eq("user_id", userId)
+          : Promise.resolve({ data: [] }),
+      ]);
 
-      if (err) throw err;
+      if (clubsRes.error) throw clubsRes.error;
+
+      setJoinedClubIds(new Set((membershipsRes.data ?? []).map((m: any) => m.club_id)));
 
       // Fetch member counts in parallel
       const withCounts = await Promise.all(
-        (clubRows ?? []).map(async (club: ClubRow) => {
+        (clubsRes.data ?? []).map(async (club: ClubRow) => {
           const { count } = await sb
             .from("club_members")
             .select("*", { count: "exact", head: true })
@@ -40,9 +45,30 @@ export function useClubs() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  return { clubs, loading, error, refetch: fetch };
+  const joinClub = useCallback(async (clubId: string) => {
+    if (!userId) throw new Error("Not signed in");
+    const sb = await getSupabase();
+    const { error } = await sb.from("club_members").insert({ club_id: clubId, user_id: userId });
+    if (error) throw error;
+    setJoinedClubIds((prev) => new Set([...prev, clubId]));
+    setClubs((prev) =>
+      prev.map((c) => c.id === clubId ? { ...c, member_count: c.member_count + 1 } : c)
+    );
+  }, [userId]);
+
+  const leaveClub = useCallback(async (clubId: string) => {
+    if (!userId) throw new Error("Not signed in");
+    const sb = await getSupabase();
+    await sb.from("club_members").delete().eq("club_id", clubId).eq("user_id", userId);
+    setJoinedClubIds((prev) => { const s = new Set(prev); s.delete(clubId); return s; });
+    setClubs((prev) =>
+      prev.map((c) => c.id === clubId ? { ...c, member_count: Math.max(0, c.member_count - 1) } : c)
+    );
+  }, [userId]);
+
+  return { clubs, joinedClubIds, loading, error, joinClub, leaveClub, refetch: fetch };
 }

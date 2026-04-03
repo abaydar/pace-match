@@ -24,10 +24,20 @@ Deno.serve(async (req) => {
     { global: { headers: { Authorization: authHeader } } }
   );
 
+  // Resolve current user via the clerk_id → users.id mapping
+  const { data: myId, error: idErr } = await supabase.rpc("current_user_id");
+  if (idErr || !myId) {
+    return new Response(JSON.stringify({ error: "User not found — ensure your profile is created" }), {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   // Get caller's profile
   const { data: me, error: meErr } = await supabase
     .from("users")
     .select("id, pace_min, pace_max, goals, distance_min, distance_max, training_type")
+    .eq("id", myId)
     .single();
 
   if (meErr || !me) {
