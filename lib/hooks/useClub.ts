@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useGetSupabase } from "./useSupabase";
-import type { ClubRow, EventRow, AnnouncementRow, RsvpStatus } from "../database.types";
+import type { ClubRow, EventRow, AnnouncementRow, RsvpStatus, UserRow } from "../database.types";
 
 export function useLeaderClub(leaderId: string | undefined) {
   const getSupabase = useGetSupabase();
   const [club, setClub] = useState<ClubRow | null>(null);
   const [events, setEvents] = useState<EventRow[]>([]);
   const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
+  const [members, setMembers] = useState<UserRow[]>([]);
   const [memberCount, setMemberCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -23,12 +24,13 @@ export function useLeaderClub(leaderId: string | undefined) {
 
     if (clubRes.data) {
       setClub(clubRes.data);
-      // Count members
-      const { count } = await sb
-        .from("club_members")
-        .select("*", { count: "exact", head: true })
-        .eq("club_id", clubRes.data.id);
-      setMemberCount(count ?? 0);
+
+      const [countRes, membersRes] = await Promise.all([
+        sb.from("club_members").select("*", { count: "exact", head: true }).eq("club_id", clubRes.data.id),
+        sb.from("club_members").select("users(*)").eq("club_id", clubRes.data.id),
+      ]);
+      setMemberCount(countRes.count ?? 0);
+      setMembers((membersRes.data ?? []).map((m: any) => m.users).filter(Boolean));
 
       // Filter events/announcements to this club
       setEvents((eventsRes.data ?? []).filter((e) => e.club_id === clubRes.data!.id));
@@ -102,6 +104,42 @@ export function useLeaderClub(leaderId: string | undefined) {
     []
   );
 
+  const addMember = useCallback(
+    async (userId: string): Promise<void> => {
+      if (!club) throw new Error("No club");
+      const sb = await getSupabase();
+      const { error } = await sb.from("club_members").insert({ club_id: club.id, user_id: userId });
+      if (error) throw error;
+      await fetch();
+    },
+    [club, fetch]
+  );
+
+  const removeMember = useCallback(
+    async (userId: string): Promise<void> => {
+      if (!club) throw new Error("No club");
+      const sb = await getSupabase();
+      await sb.from("club_members").delete().eq("club_id", club.id).eq("user_id", userId);
+      setMembers((prev) => prev.filter((m) => m.id !== userId));
+      setMemberCount((prev) => Math.max(0, prev - 1));
+    },
+    [club]
+  );
+
+  const searchRunners = useCallback(
+    async (query: string): Promise<UserRow[]> => {
+      const sb = await getSupabase();
+      const { data } = await sb
+        .from("users")
+        .select("*")
+        .eq("role", "runner")
+        .ilike("name", `%${query}%`)
+        .limit(20);
+      return data ?? [];
+    },
+    []
+  );
+
   const sendEmergencyAlert = useCallback(
     async (clubId: string, title: string, body: string): Promise<void> => {
       const sb = await getSupabase();
@@ -117,6 +155,7 @@ export function useLeaderClub(leaderId: string | undefined) {
     club,
     events,
     announcements,
+    members,
     memberCount,
     loading,
     createClub,
@@ -125,6 +164,9 @@ export function useLeaderClub(leaderId: string | undefined) {
     deleteEvent,
     postAnnouncement,
     rsvp,
+    addMember,
+    removeMember,
+    searchRunners,
     sendEmergencyAlert,
     refetch: fetch,
   };

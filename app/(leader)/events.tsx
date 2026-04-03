@@ -32,7 +32,9 @@ export default function Events() {
 
   // Form state
   const [title, setTitle] = useState('')
-  const [dateStr, setDateStr] = useState('Saturday, Mar 28 · 8:00 AM')
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
+  const [eventDate, setEventDate] = useState(tomorrow.toISOString().slice(0, 10)) // YYYY-MM-DD
+  const [eventTime, setEventTime] = useState('08:00') // HH:MM
   const [location, setLocation] = useState('')
   const [routeNotes, setRouteNotes] = useState('')
   const [paceGroupsText, setPaceGroupsText] = useState('')
@@ -46,7 +48,7 @@ export default function Events() {
     await createEvent({
       club_id: club.id,
       title,
-      datetime: new Date().toISOString(),
+      datetime: new Date(`${eventDate}T${eventTime}:00`).toISOString(),
       location,
       route_notes: routeNotes || null,
       pace_groups: paceGroupsText
@@ -62,6 +64,9 @@ export default function Events() {
     setRouteNotes('')
     setPaceGroupsText('')
     setDistancesText('')
+    const next = new Date(); next.setDate(next.getDate() + 1)
+    setEventDate(next.toISOString().slice(0, 10))
+    setEventTime('08:00')
     Alert.alert('Run Created!', `"${title}" has been added to the schedule.`)
   }
 
@@ -128,21 +133,33 @@ export default function Events() {
               />
             </View>
 
-            {/* Date */}
+            {/* Date & Time */}
             <View style={styles.formGroup}>
               <Text style={[styles.formLabel, { color: theme.textSecondary }]}>Date & Time</Text>
-              <View style={[styles.formInput, styles.dateField, { backgroundColor: theme.inputBackground }]}>
-                <Ionicons name="calendar-outline" size={16} color={theme.placeholder} />
-                <TextInput
-                  style={[styles.dateInput, { color: theme.text }]}
-                  value={dateStr}
-                  onChangeText={setDateStr}
-                  accessibilityLabel="Date and time"
-                />
+              <View style={styles.dateRow}>
+                <View style={[styles.formInput, styles.dateField, { backgroundColor: theme.inputBackground, flex: 3 }]}>
+                  <Ionicons name="calendar-outline" size={16} color={theme.placeholder} />
+                  <TextInput
+                    style={[styles.dateInput, { color: theme.text }]}
+                    value={eventDate}
+                    onChangeText={setEventDate}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={theme.placeholder}
+                    accessibilityLabel="Date"
+                  />
+                </View>
+                <View style={[styles.formInput, styles.dateField, { backgroundColor: theme.inputBackground, flex: 2 }]}>
+                  <Ionicons name="time-outline" size={16} color={theme.placeholder} />
+                  <TextInput
+                    style={[styles.dateInput, { color: theme.text }]}
+                    value={eventTime}
+                    onChangeText={setEventTime}
+                    placeholder="HH:MM"
+                    placeholderTextColor={theme.placeholder}
+                    accessibilityLabel="Time"
+                  />
+                </View>
               </View>
-              <Text style={[styles.formHint, { color: theme.placeholder }]}>
-                Date picker integration available via @react-native-community/datetimepicker
-              </Text>
             </View>
 
             {/* Location */}
@@ -288,6 +305,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.md,
     fontSize: fontSize.md,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   dateField: {
     flexDirection: 'row',
