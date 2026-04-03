@@ -2,25 +2,28 @@ import React, { useState } from 'react'
 import { View, Text, StyleSheet, Pressable, FlatList } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { getUserById } from '../data/mockData'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../hooks/useTheme'
 import { spacing, radius, fontSize, fontWeight } from '../theme'
+import type { ConnectionRow } from '../../lib/database.types'
 
 type Filter = 'all' | 'pending' | 'accepted'
 
 export default function Messages() {
   const theme = useTheme()
-  const { connectionRequests, acceptConnectionRequest, declineConnectionRequest } = useApp()
+  const { connections, acceptConnectionRequest, declineConnectionRequest, dbUser } = useApp()
   const [filter, setFilter] = useState<Filter>('all')
 
-  const filtered = connectionRequests.filter((r) => {
+  // Only show requests sent TO me (inbound)
+  const inbound = connections.filter((r: ConnectionRow) => r.to_user_id === dbUser?.id)
+
+  const filtered = inbound.filter((r: ConnectionRow) => {
     if (filter === 'pending') return r.status === 'pending'
     if (filter === 'accepted') return r.status === 'accepted'
     return r.status !== 'declined'
   })
 
-  const pendingCount = connectionRequests.filter((r) => r.status === 'pending').length
+  const pendingCount = inbound.filter((r: ConnectionRow) => r.status === 'pending').length
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['bottom']}>
@@ -59,10 +62,10 @@ export default function Messages() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-        renderItem={({ item }) => {
-          const sender = getUserById(item.fromUserId)
-          if (!sender) return null
+        renderItem={({ item }: { item: ConnectionRow }) => {
           const isPending = item.status === 'pending'
+          // Sender ID shown until a user-cache hook is added
+          const senderInitials = item.from_user_id.slice(0, 2).toUpperCase()
           return (
             <View
               style={[
@@ -74,13 +77,13 @@ export default function Messages() {
               <View style={styles.cardHeader}>
                 <View style={[styles.avatar, { backgroundColor: theme.brandLight }]}>
                   <Text style={[styles.avatarText, { color: theme.brand }]}>
-                    {sender.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                    {senderInitials}
                   </Text>
                 </View>
                 <View style={styles.info}>
-                  <Text style={[styles.name, { color: theme.text }]}>{sender.name}</Text>
+                  <Text style={[styles.name, { color: theme.text }]}>Runner {item.from_user_id.slice(0, 6)}</Text>
                   <Text style={[styles.meta, { color: theme.textSecondary }]}>
-                    {sender.paceRange} · {sender.location}
+                    Requested {new Date(item.created_at).toLocaleDateString()}
                   </Text>
                 </View>
                 <View
@@ -103,14 +106,7 @@ export default function Messages() {
                 </View>
               </View>
 
-              {/* Goals */}
-              <View style={styles.tagsRow}>
-                {sender.goals.map((g) => (
-                  <View key={g} style={[styles.tag, { backgroundColor: theme.inputBackground }]}>
-                    <Text style={[styles.tagText, { color: theme.textSecondary }]}>{g}</Text>
-                  </View>
-                ))}
-              </View>
+              {/* Status pill area — goals will be shown once user profile fetching is added */}
 
               {/* Actions */}
               {isPending && (
@@ -121,7 +117,7 @@ export default function Messages() {
                       { backgroundColor: theme.brand, opacity: pressed ? 0.8 : 1 },
                     ]}
                     onPress={() => acceptConnectionRequest(item.id)}
-                    accessibilityLabel={`Accept request from ${sender.name}`}
+                    accessibilityLabel="Accept request"
                     accessibilityRole="button"
                   >
                     <Ionicons name="checkmark" size={16} color="#fff" />
@@ -134,7 +130,7 @@ export default function Messages() {
                       { borderColor: theme.border, opacity: pressed ? 0.7 : 1 },
                     ]}
                     onPress={() => declineConnectionRequest(item.id)}
-                    accessibilityLabel={`Decline request from ${sender.name}`}
+                    accessibilityLabel="Decline request"
                     accessibilityRole="button"
                   >
                     <Ionicons name="close" size={16} color={theme.textSecondary} />
@@ -151,7 +147,7 @@ export default function Messages() {
                     styles.messageBtn,
                     { borderColor: theme.border, opacity: pressed ? 0.7 : 1 },
                   ]}
-                  accessibilityLabel={`Message ${sender.name}`}
+                  accessibilityLabel="Send message"
                   accessibilityRole="button"
                 >
                   <Ionicons name="chatbubble-outline" size={16} color={theme.brand} />

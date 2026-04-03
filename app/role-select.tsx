@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, Pressable, SafeAreaView } from 'react-native'
+import { View, Text, StyleSheet, Pressable, SafeAreaView, ActivityIndicator, Alert } from 'react-native'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { useUser } from '@clerk/clerk-expo'
 import { useApp } from './context/AppContext'
 import { useTheme } from './hooks/useTheme'
 import { spacing, radius, fontSize, fontWeight } from './theme'
@@ -25,16 +26,30 @@ const ROLES: { id: Role; icon: keyof typeof Ionicons.glyphMap; title: string; de
 
 export default function RoleSelect() {
   const theme = useTheme()
-  const { setRole } = useApp()
+  const { createUser, dbUser } = useApp()
+  const { user: clerkUser } = useUser()
   const [selected, setSelected] = useState<Role | null>(null)
+  const [saving, setSaving] = useState(false)
 
-  function handleContinue() {
-    if (!selected) return
-    setRole(selected)
-    if (selected === 'runner') {
-      router.replace('/(runner)/discover')
-    } else {
-      router.replace('/(leader)/dashboard')
+  async function handleContinue() {
+    if (!selected || !clerkUser) return
+    setSaving(true)
+    try {
+      // If user row doesn't exist yet (first sign-up), create it
+      if (!dbUser) {
+        const name = clerkUser.fullName ?? clerkUser.emailAddresses[0]?.emailAddress ?? 'Runner'
+        await createUser(name, selected)
+      }
+      if (selected === 'runner') {
+        router.replace('/(runner)/discover')
+      } else {
+        router.replace('/(leader)/dashboard')
+      }
+    } catch (e: any) {
+      console.error(e)
+      Alert.alert('Error', e?.message ?? String(e))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -104,14 +119,20 @@ export default function RoleSelect() {
           accessibilityLabel="Continue"
           accessibilityRole="button"
         >
-          <Text style={[styles.continueBtnText, { color: selected ? '#fff' : theme.placeholder }]}>
-            Continue
-          </Text>
-          <Ionicons
-            name="arrow-forward"
-            size={18}
-            color={selected ? '#fff' : theme.placeholder}
-          />
+          {saving ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Text style={[styles.continueBtnText, { color: selected ? '#fff' : theme.placeholder }]}>
+                Continue
+              </Text>
+              <Ionicons
+                name="arrow-forward"
+                size={18}
+                color={selected ? '#fff' : theme.placeholder}
+              />
+            </>
+          )}
         </Pressable>
       </View>
     </SafeAreaView>

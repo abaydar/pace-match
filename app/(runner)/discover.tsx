@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   View,
   Text,
@@ -8,62 +8,69 @@ import {
   Modal,
   ScrollView,
   TextInput,
+  ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { MOCK_USERS, MOCK_CLUBS } from '../data/mockData'
 import { RunnerCard } from '../components/RunnerCard'
 import { ClubCard } from '../components/ClubCard'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../hooks/useTheme'
 import { spacing, radius, fontSize, fontWeight } from '../theme'
+import { useRunners } from '../../lib/hooks/useRunners'
+import { useClubs } from '../../lib/hooks/useClubs'
 
 type Tab = 'runners' | 'clubs'
 
-const PACE_OPTIONS = ['Any', 'Under 7:00', '7:00–8:00', '8:00–9:00', '9:00–10:00', '10:00+']
 const GOAL_OPTIONS = ['fitness', 'social', 'long-run', 'race training']
-const DISTANCE_OPTIONS = ['3–5 mi', '6–8 mi', '9–12 mi', '12+ mi']
+const PACE_OPTIONS = ['Any', 'Under 7:00', '7:00–8:00', '8:00–9:00', '9:00–10:00', '10:00+']
+const DISTANCE_OPTIONS = ['Any', '3–5 mi', '6–8 mi', '9–12 mi', '12+ mi']
 
 export default function Discover() {
   const theme = useTheme()
   const { sendConnectionRequest, hasSentRequest } = useApp()
+  const { runners, loading: runnersLoading, fetchMatches } = useRunners()
+  const { clubs, loading: clubsLoading } = useClubs()
+
   const [activeTab, setActiveTab] = useState<Tab>('runners')
   const [query, setQuery] = useState('')
   const [showFilter, setShowFilter] = useState(false)
   const [selectedGoals, setSelectedGoals] = useState<string[]>([])
-  const [selectedDistance, setSelectedDistance] = useState<string>('Any')
-  const [selectedPace, setSelectedPace] = useState<string>('Any')
+  const [selectedPace, setSelectedPace] = useState('Any')
+  const [selectedDistance, setSelectedDistance] = useState('Any')
+
+  useEffect(() => { fetchMatches() }, [])
 
   const filteredRunners = useMemo(() => {
-    return MOCK_USERS.filter((u) => {
-      const q = query.toLowerCase()
+    const q = query.toLowerCase()
+    return runners.filter((u) => {
       const matchesSearch =
         !q ||
         u.name.toLowerCase().includes(q) ||
-        u.location.toLowerCase().includes(q) ||
-        u.goals.some((g) => g.includes(q))
+        (u.location ?? '').toLowerCase().includes(q) ||
+        u.goals.some((g: string) => g.includes(q))
       const matchesGoals =
         selectedGoals.length === 0 || selectedGoals.some((g) => u.goals.includes(g))
       return matchesSearch && matchesGoals
     })
-  }, [query, selectedGoals])
+  }, [query, selectedGoals, runners])
 
   const filteredClubs = useMemo(() => {
-    return MOCK_CLUBS.filter((c) => {
-      const q = query.toLowerCase()
-      return (
-        !q ||
-        c.name.toLowerCase().includes(q) ||
-        c.location.toLowerCase().includes(q)
-      )
-    })
-  }, [query])
+    const q = query.toLowerCase()
+    return clubs.filter((c) =>
+      !q ||
+      c.name.toLowerCase().includes(q) ||
+      (c.location ?? '').toLowerCase().includes(q)
+    )
+  }, [query, clubs])
 
   function toggleGoal(goal: string) {
     setSelectedGoals((prev) =>
       prev.includes(goal) ? prev.filter((g) => g !== goal) : [...prev, goal]
     )
   }
+
+  const loading = activeTab === 'runners' ? runnersLoading : clubsLoading
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['bottom']}>
@@ -100,7 +107,7 @@ export default function Discover() {
             key={tab}
             style={[
               styles.segment,
-              activeTab === tab && { backgroundColor: theme.surface, shadowColor: theme.shadow },
+              activeTab === tab && { backgroundColor: theme.surface },
               activeTab === tab && styles.segmentActive,
             ]}
             onPress={() => setActiveTab(tab)}
@@ -137,6 +144,13 @@ export default function Discover() {
         </View>
       )}
 
+      {/* Loading */}
+      {loading && (
+        <View style={styles.loadingRow}>
+          <ActivityIndicator color={theme.brand} />
+        </View>
+      )}
+
       {/* List */}
       {activeTab === 'runners' ? (
         <FlatList
@@ -154,31 +168,35 @@ export default function Discover() {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="search-outline" size={48} color={theme.placeholder} />
-              <Text style={[styles.emptyTitle, { color: theme.text }]}>No runners found</Text>
-              <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-                Try adjusting your search or filters
-              </Text>
-            </View>
+            !loading ? (
+              <View style={styles.empty}>
+                <Ionicons name="search-outline" size={48} color={theme.placeholder} />
+                <Text style={[styles.emptyTitle, { color: theme.text }]}>No runners found</Text>
+                <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+                  Try adjusting your search or filters
+                </Text>
+              </View>
+            ) : null
           }
         />
       ) : (
         <FlatList
           data={filteredClubs}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <ClubCard club={item} joined={item.id === 'c1'} />}
+          renderItem={({ item }) => <ClubCard club={item} />}
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="people-outline" size={48} color={theme.placeholder} />
-              <Text style={[styles.emptyTitle, { color: theme.text }]}>No clubs found</Text>
-              <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-                Try a different search term
-              </Text>
-            </View>
+            !loading ? (
+              <View style={styles.empty}>
+                <Ionicons name="people-outline" size={48} color={theme.placeholder} />
+                <Text style={[styles.emptyTitle, { color: theme.text }]}>No clubs found</Text>
+                <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+                  Try a different search term
+                </Text>
+              </View>
+            ) : null
           }
         />
       )}
@@ -194,80 +212,43 @@ export default function Discover() {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Goals */}
             <Text style={[styles.filterSection, { color: theme.textSecondary }]}>GOALS</Text>
             <View style={styles.chipGroup}>
               {GOAL_OPTIONS.map((g) => (
                 <Pressable
                   key={g}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: selectedGoals.includes(g) ? theme.brand : theme.inputBackground,
-                    },
-                  ]}
+                  style={[styles.chip, { backgroundColor: selectedGoals.includes(g) ? theme.brand : theme.inputBackground }]}
                   onPress={() => toggleGoal(g)}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      { color: selectedGoals.includes(g) ? '#fff' : theme.text },
-                    ]}
-                  >
+                  <Text style={[styles.chipText, { color: selectedGoals.includes(g) ? '#fff' : theme.text }]}>
                     {g}
                   </Text>
                 </Pressable>
               ))}
             </View>
 
-            {/* Pace */}
             <Text style={[styles.filterSection, { color: theme.textSecondary }]}>PACE RANGE</Text>
             <View style={styles.chipGroup}>
               {PACE_OPTIONS.map((p) => (
                 <Pressable
                   key={p}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: selectedPace === p ? theme.brand : theme.inputBackground,
-                    },
-                  ]}
+                  style={[styles.chip, { backgroundColor: selectedPace === p ? theme.brand : theme.inputBackground }]}
                   onPress={() => setSelectedPace(p)}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      { color: selectedPace === p ? '#fff' : theme.text },
-                    ]}
-                  >
-                    {p}
-                  </Text>
+                  <Text style={[styles.chipText, { color: selectedPace === p ? '#fff' : theme.text }]}>{p}</Text>
                 </Pressable>
               ))}
             </View>
 
-            {/* Distance */}
             <Text style={[styles.filterSection, { color: theme.textSecondary }]}>DISTANCE</Text>
             <View style={styles.chipGroup}>
               {DISTANCE_OPTIONS.map((d) => (
                 <Pressable
                   key={d}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: selectedDistance === d ? theme.brand : theme.inputBackground,
-                    },
-                  ]}
+                  style={[styles.chip, { backgroundColor: selectedDistance === d ? theme.brand : theme.inputBackground }]}
                   onPress={() => setSelectedDistance(d)}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      { color: selectedDistance === d ? '#fff' : theme.text },
-                    ]}
-                  >
-                    {d}
-                  </Text>
+                  <Text style={[styles.chipText, { color: selectedDistance === d ? '#fff' : theme.text }]}>{d}</Text>
                 </Pressable>
               ))}
             </View>
@@ -276,11 +257,7 @@ export default function Discover() {
           <View style={styles.filterActions}>
             <Pressable
               style={[styles.filterResetBtn, { borderColor: theme.border }]}
-              onPress={() => {
-                setSelectedGoals([])
-                setSelectedPace('Any')
-                setSelectedDistance('Any')
-              }}
+              onPress={() => { setSelectedGoals([]); setSelectedPace('Any'); setSelectedDistance('Any') }}
             >
               <Text style={[styles.filterResetText, { color: theme.textSecondary }]}>Reset</Text>
             </Pressable>
@@ -300,143 +277,41 @@ export default function Discover() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    margin: spacing.lg,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.lg,
-    height: 44,
-    gap: spacing.sm,
+    flexDirection: 'row', alignItems: 'center',
+    margin: spacing.lg, paddingHorizontal: spacing.md,
+    borderRadius: radius.lg, height: 44, gap: spacing.sm,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: fontSize.md,
-  },
-  filterBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  searchInput: { flex: 1, fontSize: fontSize.md },
+  filterBtn: { width: 32, height: 32, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   segmented: {
-    flexDirection: 'row',
-    marginHorizontal: spacing.lg,
-    borderRadius: radius.lg,
-    padding: 3,
-    marginBottom: spacing.md,
+    flexDirection: 'row', marginHorizontal: spacing.lg,
+    borderRadius: radius.lg, padding: 3, marginBottom: spacing.md,
   },
-  segment: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: radius.md,
-  },
-  segmentActive: {
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  segmentText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-  },
-  activeFilters: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-  },
+  segment: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: radius.md },
+  segmentActive: { shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+  segmentText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  activeFilters: { paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
   activeFilter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-    marginRight: spacing.sm,
-    gap: 4,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: radius.full, marginRight: spacing.sm, gap: 4,
   },
-  activeFilterText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    textTransform: 'capitalize',
-  },
-  list: {
-    padding: spacing.lg,
-    paddingTop: 0,
-  },
-  empty: {
-    alignItems: 'center',
-    marginTop: 60,
-    gap: spacing.md,
-  },
-  emptyTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-  },
-  emptySubtitle: {
-    fontSize: fontSize.md,
-  },
-  filterSheet: {
-    flex: 1,
-    padding: spacing.xl,
-  },
-  filterHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  filterTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-  },
-  filterSection: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    letterSpacing: 0.8,
-    marginBottom: spacing.md,
-    marginTop: spacing.xl,
-  },
-  chipGroup: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-    borderRadius: radius.full,
-  },
-  chipText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    textTransform: 'capitalize',
-  },
-  filterActions: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.xl,
-  },
-  filterResetBtn: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  filterResetText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-  },
-  filterApplyBtn: {
-    flex: 2,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-  },
-  filterApplyText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: '#fff',
-  },
+  activeFilterText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'capitalize' },
+  loadingRow: { alignItems: 'center', padding: spacing.lg },
+  list: { padding: spacing.lg, paddingTop: 0 },
+  empty: { alignItems: 'center', marginTop: 60, gap: spacing.md },
+  emptyTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  emptySubtitle: { fontSize: fontSize.md },
+  filterSheet: { flex: 1, padding: spacing.xl },
+  filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xl },
+  filterTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold },
+  filterSection: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, letterSpacing: 0.8, marginBottom: spacing.md, marginTop: spacing.xl },
+  chipGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chip: { paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.full },
+  chipText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, textTransform: 'capitalize' },
+  filterActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl },
+  filterResetBtn: { flex: 1, paddingVertical: spacing.md, borderRadius: radius.lg, borderWidth: 1, alignItems: 'center' },
+  filterResetText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  filterApplyBtn: { flex: 2, paddingVertical: spacing.md, borderRadius: radius.lg, alignItems: 'center' },
+  filterApplyText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: '#fff' },
 })
