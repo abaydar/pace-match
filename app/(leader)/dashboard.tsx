@@ -7,6 +7,7 @@ import { useApp } from '../context/AppContext'
 import { useLeaderClub } from '../../lib/hooks/useClub'
 import { useTheme } from '../hooks/useTheme'
 import { spacing, radius, fontSize, fontWeight } from '../theme'
+import { useAuth } from '@clerk/clerk-expo'
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString('en-US', {
@@ -17,7 +18,8 @@ function formatDateTime(iso: string) {
 
 export default function Dashboard() {
   const theme = useTheme()
-  const { dbUser } = useApp()
+  const { dbUser, updateUser } = useApp()
+  const { signOut } = useAuth()
   const { club, events, announcements, memberCount, loading, createClub, sendEmergencyAlert } = useLeaderClub(dbUser?.id)
 
   const [showCreateClub, setShowCreateClub] = useState(false)
@@ -25,6 +27,7 @@ export default function Dashboard() {
   const [clubDesc, setClubDesc] = useState('')
   const [clubLocation, setClubLocation] = useState('')
   const [creatingClub, setCreatingClub] = useState(false)
+  const [switchingRole, setSwitchingRole] = useState(false)
 
   const nextEvent = events[0] ?? null
   const recentAnnouncement = announcements[0] ?? null
@@ -43,6 +46,25 @@ export default function Dashboard() {
     } finally {
       setCreatingClub(false)
     }
+  }
+
+  async function handleSwitchToRunner() {
+    Alert.alert('Switch to Runner View', 'Switch to the runner experience?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Switch', onPress: async () => {
+          setSwitchingRole(true)
+          try {
+            await updateUser({ role: 'runner' })
+            router.replace('/(runner)/discover')
+          } catch (e: any) {
+            Alert.alert('Error', e.message)
+          } finally {
+            setSwitchingRole(false)
+          }
+        },
+      },
+    ])
   }
 
   function handleWeatherAlert() {
@@ -216,6 +238,36 @@ export default function Dashboard() {
             </View>
           </>
         )}
+        {/* Log out */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.switchRoleBtn,
+            { borderColor: '#FCA5A5', opacity: pressed ? 0.7 : 1 },
+          ]}
+          onPress={() => signOut().then(() => router.replace('/login'))}
+          accessibilityLabel="Log out"
+          accessibilityRole="button"
+        >
+          <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+          <Text style={[styles.switchRoleText, { color: '#EF4444' }]}>Log Out</Text>
+        </Pressable>
+
+        {/* Switch to runner */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.switchRoleBtn,
+            { borderColor: theme.border, opacity: pressed || switchingRole ? 0.7 : 1 },
+          ]}
+          onPress={handleSwitchToRunner}
+          disabled={switchingRole}
+          accessibilityLabel="Switch to runner view"
+          accessibilityRole="button"
+        >
+          <Ionicons name="person-outline" size={18} color={theme.textSecondary} />
+          <Text style={[styles.switchRoleText, { color: theme.textSecondary }]}>
+            {switchingRole ? 'Switching…' : 'Switch to Runner View'}
+          </Text>
+        </Pressable>
       </ScrollView>
 
       {/* Create Club Modal */}
@@ -494,5 +546,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
+  },
+  switchRoleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    gap: spacing.sm,
+  },
+  switchRoleText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
   },
 })

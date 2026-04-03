@@ -1,5 +1,5 @@
-import React from 'react'
-import { View, Text, StyleSheet, Pressable } from 'react-native'
+import React, { useState } from 'react'
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../hooks/useTheme'
 import { spacing, radius, fontSize, fontWeight } from '../theme'
@@ -9,16 +9,35 @@ type Props = {
   club: ClubRow & { member_count?: number }
   onPress?: () => void
   joined?: boolean
+  onJoin?: () => Promise<void>
+  onLeave?: () => Promise<void>
 }
 
-export function ClubCard({ club, onPress, joined = false }: Props) {
+export function ClubCard({ club, onPress, joined = false, onJoin, onLeave }: Props) {
   const theme = useTheme()
+  const [loading, setLoading] = useState(false)
+
+  async function handleJoinLeave() {
+    setLoading(true)
+    try {
+      if (joined) {
+        await onLeave?.()
+      } else {
+        await onJoin?.()
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <Pressable
       style={({ pressed }) => [
         styles.card,
-        { backgroundColor: theme.surface, borderColor: theme.border, opacity: pressed ? 0.9 : 1 },
+        { backgroundColor: theme.surface, borderColor: joined ? theme.brand : theme.border, opacity: pressed ? 0.9 : 1 },
+        joined && { borderWidth: 1.5 },
       ]}
       onPress={onPress}
       accessibilityLabel={`${club.name} run club`}
@@ -37,11 +56,6 @@ export function ClubCard({ club, onPress, joined = false }: Props) {
             </View>
           )}
         </View>
-        {joined && (
-          <View style={[styles.joinedBadge, { backgroundColor: theme.successLight }]}>
-            <Text style={[styles.joinedText, { color: theme.success }]}>Joined</Text>
-          </View>
-        )}
       </View>
 
       {club.description && (
@@ -50,16 +64,38 @@ export function ClubCard({ club, onPress, joined = false }: Props) {
         </Text>
       )}
 
-      {club.member_count !== undefined && (
-        <View style={styles.stats}>
+      <View style={styles.footer}>
+        {club.member_count !== undefined && (
           <View style={styles.stat}>
             <Ionicons name="people-outline" size={13} color={theme.textSecondary} />
             <Text style={[styles.statText, { color: theme.textSecondary }]}>
               {club.member_count} members
             </Text>
           </View>
-        </View>
-      )}
+        )}
+        {(onJoin || onLeave) && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.joinBtn,
+              {
+                backgroundColor: joined ? theme.inputBackground : theme.brand,
+                opacity: pressed || loading ? 0.75 : 1,
+              },
+            ]}
+            onPress={handleJoinLeave}
+            disabled={loading}
+            accessibilityLabel={joined ? 'Leave club' : 'Join club'}
+            accessibilityRole="button"
+          >
+            {loading
+              ? <ActivityIndicator size="small" color={joined ? theme.textSecondary : '#fff'} />
+              : <Text style={[styles.joinBtnText, { color: joined ? theme.textSecondary : '#fff' }]}>
+                  {joined ? 'Leave' : 'Join'}
+                </Text>
+            }
+          </Pressable>
+        )}
+      </View>
     </Pressable>
   )
 }
@@ -78,10 +114,16 @@ const styles = StyleSheet.create({
   name: { fontSize: fontSize.md, fontWeight: fontWeight.bold },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   location: { fontSize: fontSize.xs },
-  joinedBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.full },
-  joinedText: { fontSize: 11, fontWeight: fontWeight.semibold },
   description: { fontSize: fontSize.sm, lineHeight: 18 },
-  stats: { flexDirection: 'row', gap: spacing.lg },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   stat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statText: { fontSize: fontSize.sm },
+  joinBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 7,
+    borderRadius: radius.lg,
+    minWidth: 64,
+    alignItems: 'center',
+  },
+  joinBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold },
 })

@@ -1,7 +1,8 @@
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useEffect, useRef } from "react";
 import { useCurrentUser } from "../../lib/hooks/useCurrentUser";
 import { useConnections } from "../../lib/hooks/useConnections";
 import { useReadyStatus } from "../../lib/hooks/useReadyStatus";
+import { registerForPushNotifications } from "../../lib/notifications";
 import type { UserRow, UserUpdate, ReadyStatusRow, ConnectionRow } from "../../lib/database.types";
 
 type AppContextType = {
@@ -30,6 +31,15 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { dbUser, loading: userLoading, createUser, updateUser } = useCurrentUser();
+  const pushRegistered = useRef(false);
+
+  useEffect(() => {
+    if (!dbUser || pushRegistered.current) return;
+    pushRegistered.current = true;
+    registerForPushNotifications().then((token) => {
+      if (token) updateUser({ expo_push_token: token });
+    });
+  }, [dbUser?.id]);
 
   const {
     status: readyStatus,

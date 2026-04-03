@@ -28,9 +28,9 @@ const DISTANCE_OPTIONS = ['Any', '3–5 mi', '6–8 mi', '9–12 mi', '12+ mi']
 
 export default function Discover() {
   const theme = useTheme()
-  const { sendConnectionRequest, hasSentRequest } = useApp()
+  const { dbUser, sendConnectionRequest, hasSentRequest } = useApp()
   const { runners, loading: runnersLoading, fetchMatches } = useRunners()
-  const { clubs, loading: clubsLoading } = useClubs()
+  const { clubs, joinedClubIds, loading: clubsLoading, joinClub, leaveClub } = useClubs(dbUser?.id)
 
   const [activeTab, setActiveTab] = useState<Tab>('runners')
   const [query, setQuery] = useState('')
@@ -183,7 +183,14 @@ export default function Discover() {
         <FlatList
           data={filteredClubs}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <ClubCard club={item} />}
+          renderItem={({ item }) => (
+            <ClubCard
+              club={item}
+              joined={joinedClubIds.has(item.id)}
+              onJoin={() => joinClub(item.id)}
+              onLeave={() => leaveClub(item.id)}
+            />
+          )}
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
