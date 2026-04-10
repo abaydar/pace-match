@@ -1,0 +1,294 @@
+<mxfile host="app.diagrams.net" modified="2026-04-09T00:00:00.000Z" agent="Claude Code" version="21.0.0" type="device">
+  <diagram name="PaceMatch Architecture" id="pacematch-arch">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===== TITLE ===== -->
+        <mxCell id="title" value="PaceMatch Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1a1a2e;" vertex="1" parent="1">
+          <mxGeometry x="527" y="20" width="600" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ===== CLERK AUTH SERVICE ===== -->
+        <mxCell id="clerk-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;opacity=50;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="300" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="clerk-label" value="CLERK  (Auth Service)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;fontStyle=1;fontSize=13;fontColor=#7d6608;" vertex="1" parent="1">
+          <mxGeometry x="40" y="88" width="300" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="clerk-signup" value="signup / login" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffacd;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="60" y="120" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="clerk-oauth" value="Google / Apple OAuth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffacd;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="200" y="120" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="clerk-jwt" value="Session JWT&#xa;(role + clerk_id)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffacd;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="110" y="180" width="140" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ===== FRONTEND CONTAINER ===== -->
+        <mxCell id="fe-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="380" y="80" width="880" height="780" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-label" value="FRONTEND  (React Native / Expo)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;fontStyle=1;fontSize=15;fontColor=#084d6e;" vertex="1" parent="1">
+          <mxGeometry x="380" y="88" width="880" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- Root Layout -->
+        <mxCell id="root-layout" value="app/_layout.tsx (Root)&#xa;ThemeProvider → ClerkProvider → AppContextProvider" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="590" y="120" width="360" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Auth Screens -->
+        <mxCell id="index" value="index.tsx&#xa;(Landing)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="430" y="210" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="login" value="login.tsx&#xa;(Clerk auth)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="590" y="210" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="signup" value="signup.tsx&#xa;(Clerk auth)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="750" y="210" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="role-select" value="role-select.tsx&#xa;(Runner / Leader)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="300" width="150" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Runner Tabs -->
+        <mxCell id="runner-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=60;" vertex="1" parent="1">
+          <mxGeometry x="400" y="390" width="360" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="runner-label" value="(runner) TABS" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#2d6a2e;" vertex="1" parent="1">
+          <mxGeometry x="400" y="396" width="360" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="r-discover" value="discover.tsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="420" y="424" width="120" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="r-ready" value="ready.tsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="560" y="424" width="120" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="r-messages" value="messages.tsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="420" y="474" width="120" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="r-profile" value="profile.tsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="560" y="474" width="120" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="r-startrun" value="start-run.tsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="420" y="524" width="120" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="r-filter" value="filter.tsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="560" y="524" width="120" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="r-invite" value="invite/[run_id].tsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="420" y="574" width="120" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="r-accepted" value="run/[run_id]/accepted" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="560" y="574" width="120" height="36" as="geometry" />
+        </mxCell>
+
+        <!-- Leader Tabs -->
+        <mxCell id="leader-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=60;" vertex="1" parent="1">
+          <mxGeometry x="790" y="390" width="360" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="leader-label" value="(leader) TABS" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#4a2060;" vertex="1" parent="1">
+          <mxGeometry x="790" y="396" width="360" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="l-dashboard" value="dashboard.tsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="810" y="424" width="120" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="l-events" value="events.tsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="950" y="424" width="120" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="l-announcements" value="announcements.tsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="810" y="474" width="120" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="l-members" value="members.tsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="950" y="474" width="120" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="l-schedule" value="schedule.tsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="810" y="524" width="120" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="l-safety" value="safety.tsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="950" y="524" width="120" height="36" as="geometry" />
+        </mxCell>
+
+        <!-- AppContext -->
+        <mxCell id="appcontext" value="app/context/AppContext.tsx&#xa;user · readyStatus · connections" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff0d0;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="640" y="710" width="270" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Hooks -->
+        <mxCell id="hooks-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;opacity=50;" vertex="1" parent="1">
+          <mxGeometry x="480" y="790" width="590" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="hooks-label" value="lib/hooks/   useCurrentUser · useRunners · useRuns · useConnections · useReadyStatus · useMessages · useClubs · useClub · useReadyRunners" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="480" y="790" width="590" height="56" as="geometry" />
+        </mxCell>
+
+        <!-- lib/supabase.ts -->
+        <mxCell id="supabase-client" value="lib/supabase.ts&#xa;supabase + authedClient(clerkToken)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="640" y="876" width="270" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ===== BACKEND CONTAINER ===== -->
+        <mxCell id="be-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="380" y="1000" width="880" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="be-label" value="BACKEND  (Supabase)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontStyle=1;fontSize=15;fontColor=#7d1c1c;" vertex="1" parent="1">
+          <mxGeometry x="380" y="1008" width="880" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- REST/Realtime API bar -->
+        <mxCell id="api-bar" value="REST / Realtime API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="1040" width="680" height="36" as="geometry" />
+        </mxCell>
+
+        <!-- Postgres DB -->
+        <mxCell id="db-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=60;" vertex="1" parent="1">
+          <mxGeometry x="400" y="1100" width="240" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="db-label" value="Postgres Database" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="400" y="1106" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="db-tables" value="users&#xa;ready_status&#xa;run_clubs · club_members&#xa;run_events · rsvps&#xa;announcements&#xa;connection_requests&#xa;messages · push_tokens&#xa;runs · run_invites&#xa;run_messages" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=11;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="410" y="1130" width="220" height="256" as="geometry" />
+        </mxCell>
+
+        <!-- Realtime Channels -->
+        <mxCell id="rt-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=60;" vertex="1" parent="1">
+          <mxGeometry x="670" y="1100" width="220" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="rt-label" value="Realtime Channels" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="670" y="1106" width="220" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="rt-channels" value="connections&#xa;messages&#xa;ready_status&#xa;run_invites" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=11;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="680" y="1130" width="200" height="136" as="geometry" />
+        </mxCell>
+
+        <!-- Edge Functions -->
+        <mxCell id="edge-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=60;" vertex="1" parent="1">
+          <mxGeometry x="920" y="1100" width="300" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-label" value="Edge Functions" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="920" y="1106" width="300" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-match" value="match-runners&#xa;(score + rank by pace, clubs, goals)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffd7d7;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="940" y="1134" width="260" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-alert" value="send-emergency-alert&#xa;(fan-out push to club members)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffd7d7;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="940" y="1200" width="260" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Expo Push API -->
+        <mxCell id="expo-push" value="Expo Push API&#xa;(external service)&#xa;→ device push notifications" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0e0e0;strokeColor=#666666;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="940" y="1320" width="260" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== ARROWS ===================== -->
+
+        <!-- Clerk → Root Layout -->
+        <mxCell id="e-clerk-layout" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#d6b656;strokeWidth=2;" edge="1" source="clerk-jwt" target="root-layout" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Root Layout → index/login/signup -->
+        <mxCell id="e-layout-index" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#6c8ebf;" edge="1" source="root-layout" target="index" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-layout-login" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#6c8ebf;" edge="1" source="root-layout" target="login" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-layout-signup" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#6c8ebf;" edge="1" source="root-layout" target="signup" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- login/signup → role-select -->
+        <mxCell id="e-login-role" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#6c8ebf;" edge="1" source="login" target="role-select" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-signup-role" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#6c8ebf;" edge="1" source="signup" target="role-select" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- role-select → runner/leader tabs -->
+        <mxCell id="e-role-runner" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#82b366;strokeWidth=2;" edge="1" source="role-select" target="runner-bg" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-role-leader" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#9673a6;strokeWidth=2;" edge="1" source="role-select" target="leader-bg" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Runner/Leader tabs → AppContext -->
+        <mxCell id="e-runner-ctx" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#d79b00;strokeWidth=2;" edge="1" source="runner-bg" target="appcontext" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-leader-ctx" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#d79b00;strokeWidth=2;" edge="1" source="leader-bg" target="appcontext" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- AppContext → Hooks -->
+        <mxCell id="e-ctx-hooks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#d79b00;strokeWidth=2;" edge="1" source="appcontext" target="hooks-bg" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Hooks → supabase client -->
+        <mxCell id="e-hooks-client" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#d79b00;strokeWidth=2;" edge="1" source="hooks-bg" target="supabase-client" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- supabase client → Supabase API bar -->
+        <mxCell id="e-client-api" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#b85450;strokeWidth=2;dashed=1;" edge="1" source="supabase-client" target="api-bar" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="775" y="960" />
+              <mxPoint x="820" y="960" />
+              <mxPoint x="820" y="1058" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-client-api-label" value="HTTPS + JWT" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=2;" vertex="1" connectable="0" parent="e-client-api">
+          <mxGeometry x="-0.1" relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- API bar → DB, Realtime, Edge Functions -->
+        <mxCell id="e-api-db" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#b85450;" edge="1" source="api-bar" target="db-bg" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-api-rt" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#b85450;" edge="1" source="api-bar" target="rt-bg" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-api-edge" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#b85450;" edge="1" source="api-bar" target="edge-bg" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Realtime → AppContext (push updates back) -->
+        <mxCell id="e-rt-ctx" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#e05d00;strokeWidth=2;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" source="rt-bg" target="hooks-bg" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-rt-ctx-label" value="Realtime push" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=2;fontColor=#e05d00;" vertex="1" connectable="0" parent="e-rt-ctx">
+          <mxGeometry x="0.1" relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edge Functions → Expo Push -->
+        <mxCell id="e-edge-push" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="edge-alert" target="expo-push" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Clerk → Supabase (JWT validation) -->
+        <mxCell id="e-clerk-supa" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#d6b656;strokeWidth=2;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" source="clerk-bg" target="api-bar" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="190" y="980" />
+              <mxPoint x="820" y="980" />
+              <mxPoint x="820" y="1058" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-clerk-supa-label" value="JWT validation (RLS)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=2;fontColor=#7d6608;" vertex="1" connectable="0" parent="e-clerk-supa">
+          <mxGeometry x="0.2" relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
