@@ -33,9 +33,18 @@ export default function RunnerLayout() {
         }}
       />
       <Tabs.Screen
+        name="filter"
+        options={{
+          title: 'Find Run',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="flag-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="ready"
         options={{
-          title: 'Ready to Run',
+          title: 'Ready',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="flash-outline" size={size} color={color} />
           ),
@@ -59,6 +68,8 @@ export default function RunnerLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="runners" options={{ href: null, title: 'Available Runners' }} />
+      <Tabs.Screen name="start-run" options={{ href: null, title: 'Start a Run' }} />
     </Tabs>
   )
 }

@@ -4,6 +4,8 @@ export type ReadyStatusVisibility = "everyone" | "club_members";
 export type RsvpStatus = "going" | "maybe" | "not_going";
 export type ConnectionStatus = "pending" | "accepted" | "declined";
 export type TrainingType = "5k" | "10k" | "half" | "marathon";
+export type RunStatus = "open" | "closed" | "cancelled";
+export type InviteStatus = "pending" | "accepted" | "declined";
 
 export interface Database {
   public: {
@@ -23,6 +25,11 @@ export interface Database {
           distance_max: number | null;
           training_type: TrainingType | null;
           destination_runs: string[];
+          gender: string | null;
+          is_available: boolean;
+          expo_push_token: string | null;
+          latitude: number | null;
+          longitude: number | null;
           created_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["users"]["Row"], "id" | "created_at"> & {
@@ -163,6 +170,56 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["push_tokens"]["Insert"]>;
       };
+      runs: {
+        Row: {
+          id: string;
+          host_id: string;
+          time: string;
+          latitude: number;
+          longitude: number;
+          location_label: string | null;
+          pace_bucket: string | null;
+          distance: string | null;
+          training_type: string | null;
+          status: RunStatus;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["runs"]["Row"], "id" | "status" | "created_at"> & {
+          id?: string;
+          status?: RunStatus;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["runs"]["Insert"]>;
+      };
+      run_invites: {
+        Row: {
+          id: string;
+          run_id: string;
+          runner_id: string;
+          status: InviteStatus;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["run_invites"]["Row"], "id" | "status" | "created_at"> & {
+          id?: string;
+          status?: InviteStatus;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["run_invites"]["Insert"]>;
+      };
+      run_messages: {
+        Row: {
+          id: string;
+          run_id: string;
+          sender_id: string;
+          body: string;
+          sent_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["run_messages"]["Row"], "id" | "sent_at"> & {
+          id?: string;
+          sent_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["run_messages"]["Insert"]>;
+      };
     };
   };
 }
@@ -191,3 +248,11 @@ export type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
 export type MessageInsert = Database["public"]["Tables"]["messages"]["Insert"];
 
 export type RsvpRow = Database["public"]["Tables"]["rsvps"]["Row"];
+
+export type RunRow = Database["public"]["Tables"]["runs"]["Row"];
+export type RunInsert = Database["public"]["Tables"]["runs"]["Insert"];
+
+export type RunInviteRow = Database["public"]["Tables"]["run_invites"]["Row"];
+export type RunInviteInsert = Database["public"]["Tables"]["run_invites"]["Insert"];
+
+export type RunMessageRow = Database["public"]["Tables"]["run_messages"]["Row"];

@@ -68,6 +68,10 @@ export default function LeaderLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="members"
+        options={{ href: null, title: 'Members' }}
+      />
     </Tabs>
   )
 }

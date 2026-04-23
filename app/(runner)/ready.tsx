@@ -6,13 +6,15 @@ import {
   Pressable,
   Switch,
   ScrollView,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../hooks/useTheme'
 import { spacing, radius, fontSize, fontWeight } from '../theme'
-import { useRunners } from '../../lib/hooks/useRunners'
+import { useReadyRunners } from '../../lib/hooks/useReadyRunners'
 import type { ReadyStatusVisibility } from '../../lib/database.types'
 
 type TimeOption = 'now' | 'today-morning' | 'today-afternoon' | 'today-evening' | 'tomorrow-morning' | 'tomorrow-evening'
@@ -65,13 +67,12 @@ function timeOptionToWindow(value: TimeOption): { start: Date; end: Date } | nul
 export default function ReadyToRun() {
   const theme = useTheme()
   const { readyStatus, setReadyNow, setTimeWindow, clearReadyStatus, dbUser } = useApp()
-  const { runners, fetchMatches } = useRunners()
+  const { runners, loading: runnersLoading, refetch: refetchRunners } = useReadyRunners(dbUser?.id)
   const [isReady, setIsReady] = useState(readyStatus !== null)
   const [timeOption, setTimeOption] = useState<TimeOption>('now')
-  const [visibility, setVisibility] = useState<ReadyStatusVisibility>('club_members')
+  const [visibility, setVisibility] = useState<ReadyStatusVisibility>('everyone')
 
-  // Runners with active ready status from matched results
-  const availableRunners = runners.filter((r) => r.ready_status !== null)
+  const availableRunners = runners
 
   async function handleToggle(value: boolean) {
     setIsReady(value)
@@ -82,10 +83,11 @@ export default function ReadyToRun() {
         const window = timeOptionToWindow(timeOption)
         if (window) await setTimeWindow(window.start, window.end, visibility)
       }
-      fetchMatches()
+      refetchRunners()
     } else {
       await clearReadyStatus()
     }
+    refetchRunners()
   }
 
   async function handleTimeChange(value: TimeOption) {
@@ -112,6 +114,23 @@ export default function ReadyToRun() {
     }
   }
 
+  function paceLabel(paceMin: number | null, paceMax: number | null): string {
+    if (!paceMin || !paceMax) return ''
+    const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+    return `${fmt(paceMin)}–${fmt(paceMax)} /mi`
+  }
+
+  function windowLabel(r: { time_window_start: string | null; time_window_end: string | null }): string {
+    if (!r.time_window_start) return 'Right now'
+    const start = new Date(r.time_window_start)
+    const h = start.getHours()
+    if (h < 12) return 'This morning'
+    if (h < 17) return 'This afternoon'
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
+    if (start.toDateString() === tomorrow.toDateString()) return 'Tomorrow'
+    return 'This evening'
+  }
+
   function readyStatusLabel(): string {
     if (!isReady) return "Let others know you're available"
     const opt = TIME_OPTIONS.find((o) => o.value === timeOption)
@@ -121,7 +140,13 @@ export default function ReadyToRun() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={runnersLoading} onRefresh={refetchRunners} tintColor={theme.brand} />
+        }
+      >
         {/* Status Card */}
         <View style={[styles.statusCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.statusRow}>
@@ -228,7 +253,11 @@ export default function ReadyToRun() {
           </View>
         </View>
 
-        {availableRunners.length === 0 ? (
+        {runnersLoading ? (
+          <View style={styles.emptyFeed}>
+            <ActivityIndicator color={theme.brand} />
+          </View>
+        ) : availableRunners.length === 0 ? (
           <View style={[styles.emptyFeed, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Ionicons name="people-outline" size={40} color={theme.placeholder} />
             <Text style={[styles.emptyTitle, { color: theme.text }]}>No one's ready yet</Text>
@@ -243,18 +272,23 @@ export default function ReadyToRun() {
                 key={runner.id}
                 style={[styles.runnerRow, { backgroundColor: theme.surface, borderColor: theme.border }]}
               >
-                <View style={[styles.miniAvatar, { backgroundColor: theme.brandLight }]}>
-                  <Text style={[styles.miniAvatarText, { color: theme.brand }]}>
+                <View style={[styles.miniAvatar, { backgroundColor: '#D1FAE5' }]}>
+                  <Text style={[styles.miniAvatarText, { color: '#059669' }]}>
                     {runner.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                   </Text>
                 </View>
                 <View style={styles.runnerInfo}>
                   <Text style={[styles.runnerName, { color: theme.text }]}>{runner.name}</Text>
                   <Text style={[styles.runnerMeta, { color: theme.textSecondary }]}>
-                    {runner.location ?? 'Unknown location'}
+                    {[
+                      windowLabel(runner),
+                      paceLabel(runner.pace_min, runner.pace_max),
+                      runner.location,
+                    ].filter(Boolean).join(' · ')}
                   </Text>
                 </View>
                 <View style={[styles.readyBadge, { backgroundColor: '#D1FAE5' }]}>
+                  <Ionicons name="flash" size={11} color="#059669" />
                   <Text style={styles.readyBadgeText}>Ready</Text>
                 </View>
               </View>
@@ -403,6 +437,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   readyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: radius.full,

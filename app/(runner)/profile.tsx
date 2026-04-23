@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../hooks/useTheme'
 import { spacing, radius, fontSize, fontWeight } from '../theme'
 import { router } from 'expo-router'
+import { useAuth } from '@clerk/clerk-expo'
 
 const GOAL_OPTIONS = ['fitness', 'social', 'long-run', 'race training']
 const DISTANCE_OPTIONS = ['3–5 mi', '6–8 mi', '9–12 mi', '12+ mi']
@@ -14,11 +15,32 @@ const TRAINING_OPTIONS = ['5K', '10K', 'Half Marathon', 'Marathon', 'None']
 export default function Profile() {
   const theme = useTheme()
   const { dbUser, updateUser } = useApp()
+  const { signOut } = useAuth()
 
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(dbUser?.name ?? '')
   const [location, setLocation] = useState(dbUser?.location ?? '')
   const [saving, setSaving] = useState(false)
+  const [switchingRole, setSwitchingRole] = useState(false)
+
+  async function handleSwitchToLeader() {
+    Alert.alert('Switch to Leader View', 'Switch to your run club leader dashboard?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Switch', onPress: async () => {
+          setSwitchingRole(true)
+          try {
+            await updateUser({ role: 'leader' })
+            router.replace('/(leader)/dashboard')
+          } catch (e: any) {
+            Alert.alert('Error', e.message)
+          } finally {
+            setSwitchingRole(false)
+          }
+        },
+      },
+    ])
+  }
 
   const user = dbUser
   if (!user) return null
@@ -142,6 +164,37 @@ export default function Profile() {
             </View>
           </View>
         )}
+
+        {/* Log out */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.switchRoleBtn,
+            { borderColor: '#FCA5A5', opacity: pressed ? 0.7 : 1 },
+          ]}
+          onPress={() => signOut().then(() => router.replace('/login'))}
+          accessibilityLabel="Log out"
+          accessibilityRole="button"
+        >
+          <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+          <Text style={[styles.switchRoleText, { color: '#EF4444' }]}>Log Out</Text>
+        </Pressable>
+
+        {/* Switch to leader */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.switchRoleBtn,
+            { borderColor: theme.border, opacity: pressed || switchingRole ? 0.7 : 1 },
+          ]}
+          onPress={handleSwitchToLeader}
+          disabled={switchingRole}
+          accessibilityLabel="Switch to leader view"
+          accessibilityRole="button"
+        >
+          <Ionicons name="people-outline" size={18} color={theme.textSecondary} />
+          <Text style={[styles.switchRoleText, { color: theme.textSecondary }]}>
+            {switchingRole ? 'Switching…' : 'Switch to Leader View'}
+          </Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   )

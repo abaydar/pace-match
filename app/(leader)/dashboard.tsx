@@ -1,5 +1,5 @@
-import React from 'react'
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native'
+import React, { useState } from 'react'
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Modal, TextInput, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
@@ -7,6 +7,7 @@ import { useApp } from '../context/AppContext'
 import { useLeaderClub } from '../../lib/hooks/useClub'
 import { useTheme } from '../hooks/useTheme'
 import { spacing, radius, fontSize, fontWeight } from '../theme'
+import { useAuth } from '@clerk/clerk-expo'
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString('en-US', {
@@ -17,11 +18,54 @@ function formatDateTime(iso: string) {
 
 export default function Dashboard() {
   const theme = useTheme()
-  const { dbUser } = useApp()
-  const { club, events, announcements, memberCount, sendEmergencyAlert } = useLeaderClub(dbUser?.id)
+  const { dbUser, updateUser } = useApp()
+  const { signOut } = useAuth()
+  const { club, events, announcements, memberCount, loading, createClub, sendEmergencyAlert } = useLeaderClub(dbUser?.id)
+
+  const [showCreateClub, setShowCreateClub] = useState(false)
+  const [clubName, setClubName] = useState('')
+  const [clubDesc, setClubDesc] = useState('')
+  const [clubLocation, setClubLocation] = useState('')
+  const [creatingClub, setCreatingClub] = useState(false)
+  const [switchingRole, setSwitchingRole] = useState(false)
 
   const nextEvent = events[0] ?? null
   const recentAnnouncement = announcements[0] ?? null
+
+  async function handleCreateClub() {
+    if (!clubName.trim() || !dbUser) return
+    setCreatingClub(true)
+    try {
+      await createClub(clubName.trim(), clubDesc.trim(), clubLocation.trim())
+      setShowCreateClub(false)
+      setClubName('')
+      setClubDesc('')
+      setClubLocation('')
+    } catch (e: any) {
+      Alert.alert('Error', e.message)
+    } finally {
+      setCreatingClub(false)
+    }
+  }
+
+  async function handleSwitchToRunner() {
+    Alert.alert('Switch to Runner View', 'Switch to the runner experience?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Switch', onPress: async () => {
+          setSwitchingRole(true)
+          try {
+            await updateUser({ role: 'runner' })
+            router.replace('/(runner)/discover')
+          } catch (e: any) {
+            Alert.alert('Error', e.message)
+          } finally {
+            setSwitchingRole(false)
+          }
+        },
+      },
+    ])
+  }
 
   function handleWeatherAlert() {
     if (!club) return
@@ -58,6 +102,26 @@ export default function Dashboard() {
             </Text>
           </View>
         </View>
+
+        {/* Create club prompt */}
+        {!loading && !club && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.createClubCard,
+              { backgroundColor: theme.brand, opacity: pressed ? 0.9 : 1 },
+            ]}
+            onPress={() => setShowCreateClub(true)}
+            accessibilityLabel="Set up your club"
+            accessibilityRole="button"
+          >
+            <Ionicons name="add-circle-outline" size={28} color="#fff" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.createClubTitle}>Set Up Your Club</Text>
+              <Text style={styles.createClubSub}>Tap to create your run club and get started.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
+          </Pressable>
+        )}
 
         {/* Next run card */}
         {nextEvent ? (
@@ -130,6 +194,21 @@ export default function Dashboard() {
             </View>
             <Text style={[styles.quickActionLabel, { color: theme.text }]}>Weather Alert</Text>
           </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.quickAction,
+              { backgroundColor: theme.surface, borderColor: theme.border, opacity: pressed ? 0.8 : 1 },
+            ]}
+            onPress={() => router.push('/(leader)/members')}
+            accessibilityLabel="Manage club members"
+            accessibilityRole="button"
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#DCFCE7' }]}>
+              <Ionicons name="people-outline" size={22} color="#16A34A" />
+            </View>
+            <Text style={[styles.quickActionLabel, { color: theme.text }]}>Members</Text>
+          </Pressable>
         </View>
 
         {/* Recent announcement */}
@@ -159,7 +238,96 @@ export default function Dashboard() {
             </View>
           </>
         )}
+        {/* Log out */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.switchRoleBtn,
+            { borderColor: '#FCA5A5', opacity: pressed ? 0.7 : 1 },
+          ]}
+          onPress={() => signOut().then(() => router.replace('/login'))}
+          accessibilityLabel="Log out"
+          accessibilityRole="button"
+        >
+          <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+          <Text style={[styles.switchRoleText, { color: '#EF4444' }]}>Log Out</Text>
+        </Pressable>
+
+        {/* Switch to runner */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.switchRoleBtn,
+            { borderColor: theme.border, opacity: pressed || switchingRole ? 0.7 : 1 },
+          ]}
+          onPress={handleSwitchToRunner}
+          disabled={switchingRole}
+          accessibilityLabel="Switch to runner view"
+          accessibilityRole="button"
+        >
+          <Ionicons name="person-outline" size={18} color={theme.textSecondary} />
+          <Text style={[styles.switchRoleText, { color: theme.textSecondary }]}>
+            {switchingRole ? 'Switching…' : 'Switch to Runner View'}
+          </Text>
+        </Pressable>
       </ScrollView>
+
+      {/* Create Club Modal */}
+      <Modal visible={showCreateClub} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={[styles.modalSafe, { backgroundColor: theme.background }]}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Create Your Club</Text>
+            <Pressable onPress={() => setShowCreateClub(false)} accessibilityLabel="Close" accessibilityRole="button">
+              <Ionicons name="close" size={24} color={theme.text} />
+            </Pressable>
+          </View>
+          <View style={styles.form}>
+            <Text style={[styles.formLabel, { color: theme.textSecondary }]}>Club Name *</Text>
+            <TextInput
+              style={[styles.formInput, { backgroundColor: theme.inputBackground, color: theme.text }]}
+              placeholder="e.g. Brooklyn Distance Runners"
+              placeholderTextColor={theme.placeholder}
+              value={clubName}
+              onChangeText={setClubName}
+              accessibilityLabel="Club name"
+            />
+            <Text style={[styles.formLabel, { color: theme.textSecondary }]}>Description</Text>
+            <TextInput
+              style={[styles.formInput, styles.textArea, { backgroundColor: theme.inputBackground, color: theme.text }]}
+              placeholder="What's your club about?"
+              placeholderTextColor={theme.placeholder}
+              value={clubDesc}
+              onChangeText={setClubDesc}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              accessibilityLabel="Club description"
+            />
+            <Text style={[styles.formLabel, { color: theme.textSecondary }]}>Location</Text>
+            <TextInput
+              style={[styles.formInput, { backgroundColor: theme.inputBackground, color: theme.text }]}
+              placeholder="e.g. Brooklyn, NY"
+              placeholderTextColor={theme.placeholder}
+              value={clubLocation}
+              onChangeText={setClubLocation}
+              accessibilityLabel="Club location"
+            />
+            <Pressable
+              style={({ pressed }) => [
+                styles.submitBtn,
+                { backgroundColor: theme.brand, opacity: pressed || creatingClub ? 0.85 : 1 },
+              ]}
+              onPress={handleCreateClub}
+              disabled={creatingClub || !clubName.trim()}
+              accessibilityLabel="Create club"
+              accessibilityRole="button"
+            >
+              {creatingClub
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.submitBtnText}>Create Club</Text>
+              }
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -319,5 +487,77 @@ const styles = StyleSheet.create({
   },
   scheduleText: {
     fontSize: fontSize.md,
+  },
+  createClubCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  createClubTitle: {
+    color: '#fff',
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+  },
+  createClubSub: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: fontSize.sm,
+    marginTop: 2,
+  },
+  modalSafe: { flex: 1 },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  modalTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+  },
+  form: {
+    padding: spacing.xl,
+    paddingTop: 0,
+    gap: spacing.md,
+  },
+  formLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  formInput: {
+    padding: spacing.md,
+    borderRadius: radius.md,
+    fontSize: fontSize.md,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  submitBtn: {
+    paddingVertical: spacing.lg,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  submitBtnText: {
+    color: '#fff',
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+  },
+  switchRoleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    gap: spacing.sm,
+  },
+  switchRoleText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
   },
 })
